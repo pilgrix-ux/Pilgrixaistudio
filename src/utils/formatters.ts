@@ -10,7 +10,9 @@ export const formatFileSize = (bytes: number): string => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-export const formatDate = (date: Date): string => {
+export const formatDate = (value: Date | string): string => {
+  const date = typeof value === 'string' ? new Date(value) : value
+
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',

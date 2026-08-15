@@ -1,67 +1,119 @@
 /**
- * Media service - handles media asset operations
+ * Media service boundary.
+ *
+ * This keeps upload, metadata, preview, association, and deletion logic behind a
+ * typed service and stores files using the storage adapter abstraction.
  */
 
-import { MediaAsset } from '@/types'
+import { config } from '@/lib/config'
+import { apiClient } from '@/services/apiClient'
+import { storageService } from '@/services/storageService'
+import type { ApiResponse, MediaAsset, MediaType } from '@/types'
 
-// Simulate in-memory storage for MVP
 const mediaAssets: Map<string, MediaAsset> = new Map()
 
+const inferMediaType = (file: File): MediaType => {
+  if (file.type.startsWith('image/')) return 'image'
+  if (file.type.startsWith('video/')) return 'video'
+  if (file.type.startsWith('audio/')) return 'audio'
+  return 'document'
+}
+
 export const mediaService = {
-  /**
-   * Add a new media asset
-   */
-  addAsset(
+  async uploadMedia(
     projectId: string,
     file: File,
-    type: 'image' | 'video' | 'audio' | 'document',
-  ): MediaAsset {
-    const asset: MediaAsset = {
-      id: `asset-${Date.now()}`,
-      projectId,
-      name: file.name,
-      type,
-      mimeType: file.type,
-      fileSize: file.size,
-      uploadedAt: new Date(),
+    mediaType?: MediaType,
+  ): Promise<ApiResponse<MediaAsset>> {
+    if (config.api.mode !== 'local-dev') {
+      return apiClient.request<MediaAsset>('/api/media', {
+        method: 'POST',
+        body: { projectId, file, mediaType },
+      })
     }
+
+    const resolvedType = mediaType ?? inferMediaType(file)
+    const object = await storageService.put(file, projectId, {
+      filename: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      mediaType: resolvedType,
+      size: file.size,
+      status: 'ready',
+    })
+
+    const asset: MediaAsset = {
+      id: `asset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      projectId,
+      filename: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      mediaType: resolvedType,
+      size: file.size,
+      storageReference: object.reference,
+      createdAt: new Date().toISOString(),
+      previewUrl: object.url,
+      status: 'ready',
+    }
+
     mediaAssets.set(asset.id, asset)
-    return asset
+
+    return {
+      ok: true,
+      data: asset,
+      requestId: `local-media-upload-${asset.id}`,
+      timestamp: new Date().toISOString(),
+    }
   },
 
-  /**
-   * Get all assets for a project
-   */
-  getProjectAssets(projectId: string): MediaAsset[] {
-    return Array.from(mediaAssets.values()).filter(
+  async listProjectMedia(projectId: string): Promise<ApiResponse<MediaAsset[]>> {
+    if (config.api.mode !== 'local-dev') {
+      return apiClient.request<MediaAsset[]>(`/api/projects/${projectId}/media`)
+    }
+
+    const assets = Array.from(mediaAssets.values()).filter(
       (asset) => asset.projectId === projectId,
     )
+
+    return {
+      ok: true,
+      data: assets,
+      requestId: `local-project-media-${projectId}`,
+      timestamp: new Date().toISOString(),
+    }
   },
 
-  /**
-   * Get asset by ID
-   */
-  getAsset(id: string): MediaAsset | undefined {
-    return mediaAssets.get(id)
+  async getMedia(id: string): Promise<ApiResponse<MediaAsset | null>> {
+    if (config.api.mode !== 'local-dev') {
+      return apiClient.request<MediaAsset | null>(`/api/media/${id}`)
+    }
+
+    return {
+      ok: true,
+      data: mediaAssets.get(id) ?? null,
+      requestId: `local-media-get-${id}`,
+      timestamp: new Date().toISOString(),
+    }
   },
 
-  /**
-   * Delete asset
-   */
-  deleteAsset(id: string): boolean {
-    return mediaAssets.delete(id)
+  async deleteMedia(id: string): Promise<ApiResponse<boolean>> {
+    if (config.api.mode !== 'local-dev') {
+      return apiClient.request<boolean>(`/api/media/${id}`, {
+        method: 'DELETE',
+      })
+    }
+
+    const deleted = mediaAssets.delete(id)
+    return {
+      ok: true,
+      data: deleted,
+      requestId: `local-media-delete-${id}`,
+      timestamp: new Date().toISOString(),
+    }
   },
 
-  /**
-   * Check if file size is within limits
-   */
-  isFileSizeValid(fileSize: number, maxSize: number = 104857600): boolean {
+  isFileSizeValid(fileSize: number, maxSize = config.storage.maxFileSize): boolean {
     return fileSize <= maxSize
   },
 
-  /**
-   * Get supported file types
-   */
   getSupportedFileTypes(): Record<string, string[]> {
     return {
       image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],

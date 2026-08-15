@@ -1,35 +1,45 @@
 /**
- * AI service stub - placeholder for future AI integration
+ * Editor-focused AI boundary.
+ *
+ * This project intentionally keeps the in-app editor AI separate from the
+ * AI Companion Hub chatbot experience. Real provider connections are disabled by
+ * default and must be configured explicitly via environment variables.
  */
 
-import { AIAction } from '@/types'
+import { config } from '@/lib/config'
+import type { AIAction } from '@/types'
 
 export const aiService = {
-  /**
-   * Placeholder for AI-assisted editing
-   */
   async processMediaWithAI(
     assetId: string,
     action: string,
   ): Promise<AIAction> {
-    // Stub implementation - will integrate with real AI API later
-    const result: AIAction = {
+    if (config.ai.provider === 'none') {
+      return {
+        id: `ai-action-${Date.now()}`,
+        type: 'not_configured',
+        params: { assetId, action, provider: config.ai.provider },
+        status: 'not_configured',
+        result: {
+          provider: config.ai.provider,
+          message: 'Editor AI is not configured for this environment.',
+        },
+      }
+    }
+
+    return {
       id: `ai-action-${Date.now()}`,
       type: 'enhance',
-      params: { assetId, action },
+      params: { assetId, action, provider: config.ai.provider },
       status: 'pending',
     }
-    return result
   },
 
-  /**
-   * Generate suggestions for media editing
-   */
   async getEditingSuggestions(): Promise<string[]> {
-    // Stub - will be replaced with actual AI API
-    return [
-      'Feature not yet available',
-      'Connect to AI service in settings',
-    ]
+    if (config.ai.provider === 'none') {
+      return ['Editor AI is not configured for this environment.']
+    }
+
+    return ['AI editing assistance is ready for provider integration.']
   },
 }

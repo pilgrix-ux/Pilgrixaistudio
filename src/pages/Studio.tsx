@@ -2,7 +2,7 @@
  * Main studio/dashboard page
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { AIAssistantPanel } from '@/components/AIAssistantPanel'
@@ -10,31 +10,45 @@ import { EmptyState } from '@/components/EmptyState'
 import { ProjectCard } from '@/components/ProjectCard'
 import { MediaUpload } from '@/components/MediaUpload'
 import { NewProjectModal } from '@/components/NewProjectModal'
+import { mediaService } from '@/services/mediaService'
 import { projectService } from '@/services/projectService'
-import { Project } from '@/types'
+import type { Project } from '@/types'
 
 export function Studio(): JSX.Element {
-  const [projects, setProjects] = useState<Project[]>(() =>
-    projectService.getProjects(),
-  )
+  const [projects, setProjects] = useState<Project[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
+  const fetchProjects = useCallback(async (): Promise<void> => {
+    const response = await projectService.listProjects()
+    if (response.ok && response.data) {
+      setProjects(response.data)
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchProjects()
+  }, [fetchProjects])
+
   const handleCreateProject = useCallback(
-    (name: string, description: string): void => {
-      const newProject = projectService.createProject(name, description)
-      setProjects([newProject, ...projects])
+    async (name: string, description: string): Promise<void> => {
+      const response = await projectService.createProject({ name, description })
+      if (response.ok && response.data) {
+        setProjects((current) => [response.data as Project, ...current])
+      }
       setIsModalOpen(false)
     },
-    [projects],
+    [],
   )
 
   const handleDeleteProject = useCallback(
-    (projectId: string): void => {
-      projectService.deleteProject(projectId)
-      setProjects(projects.filter((p) => p.id !== projectId))
+    async (projectId: string): Promise<void> => {
+      const response = await projectService.deleteProject(projectId)
+      if (response.ok) {
+        setProjects((current) => current.filter((p) => p.id !== projectId))
+      }
     },
-    [projects],
+    [],
   )
 
   const handleSelectProject = useCallback(
@@ -44,10 +58,21 @@ export function Studio(): JSX.Element {
     [],
   )
 
-  const handleFileSelect = (files: File[]): void => {
-    console.log('Files selected:', files)
-    // TODO: Integrate with media service
-  }
+  const handleFileSelect = useCallback(
+    async (files: File[]): Promise<void> => {
+      if (!selectedProject) {
+        return
+      }
+
+      for (const file of files) {
+        const response = await mediaService.uploadMedia(selectedProject.id, file)
+        if (!response.ok || !response.data) {
+          console.warn('Media upload not accepted:', response.error)
+        }
+      }
+    },
+    [selectedProject],
+  )
 
   const handleOpenNewProject = (): void => {
     setIsModalOpen(true)
