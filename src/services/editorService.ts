@@ -1,9 +1,9 @@
 /**
  * Editor AI service.
  *
- * This is the editor AI, not the AI Companion Hub chatbot. The current app does
- * not have a configured AI provider, so this service returns an explicit
- * configuration status instead of pretending an edit succeeded.
+ * This is the editor/project AI boundary, not the AI Companion Hub chatbot.
+ * Requests are intentionally structured for editor operations and they return a
+ * typed configuration/error state when no real model/provider is configured.
  */
 
 import { buildApiError, normalizeError } from '@/services/apiClient'
@@ -12,13 +12,19 @@ import { config } from '@/lib/config'
 
 const editorRequests = new Map<string, EditorInstructionResult>()
 
+const isRealEditorAiConfigured = (): boolean => {
+  return config.ai.provider !== 'none' && Boolean(config.ai.apiUrl)
+}
+
 export const editorService = {
   async requestInstruction(
     request: EditorInstructionRequest,
   ): Promise<EditorInstructionResult> {
-    const requestId = request.requestId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const requestId =
+      request.requestId ??
+      `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
-    if (config.ai.provider !== 'configured') {
+    if (!isRealEditorAiConfigured()) {
       const result: EditorInstructionResult = {
         requestId,
         status: 'not_configured',
@@ -27,16 +33,18 @@ export const editorService = {
           projectId: request.projectId,
           mediaId: request.mediaId ?? null,
           instruction: request.instruction,
+          context: request.context ?? {},
         },
         affectedAssets: request.mediaId ? [request.mediaId] : [],
         error: buildApiError(
           'configuration_error',
           'Editor AI is not configured for this environment.',
-          'The editor AI is not connected yet. Configure the provider to enable editing requests.',
+          'The editor AI provider is not connected yet. Configure the environment to enable editing requests.',
           503,
           {
             provider: config.ai.provider,
             projectId: request.projectId,
+            model: config.ai.model,
           },
           false,
           requestId,

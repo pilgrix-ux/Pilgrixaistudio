@@ -1,9 +1,10 @@
 /**
  * Configuration utilities.
  *
- * Public browser config is kept separate from server-only secrets. This app does
- * not yet have a configured backend provider, so integrations remain explicit
- * and disabled by default.
+ * Public browser config is kept separate from server-only secrets. The app only
+ * reads public configuration values here and keeps all private credentials out of
+ * the browser bundle. When a provider is not configured, the services return an
+ * explicit configuration error instead of pretending the request succeeded.
  */
 
 export const config = {
@@ -11,6 +12,9 @@ export const config = {
     baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
     timeout: 30000,
     mode: (import.meta.env.VITE_API_MODE as 'local-dev' | 'remote' | undefined) || 'local-dev',
+    jobApiUrl: import.meta.env.VITE_JOB_API_URL || '',
+    exportApiUrl: import.meta.env.VITE_EXPORT_API_URL || '',
+    mediaApiUrl: import.meta.env.VITE_MEDIA_API_URL || '',
   },
 
   app: {
@@ -20,7 +24,7 @@ export const config = {
 
   auth: {
     provider: (import.meta.env.VITE_AUTH_PROVIDER as 'none' | 'supabase' | undefined) || 'none',
-    sessionStorageKey: 'pilgrixaistudio-session',
+    sessionStorageKey: import.meta.env.VITE_AUTH_SESSION_STORAGE_KEY || 'pilgrixaistudio-session',
   },
 
   ai: {
@@ -40,6 +44,12 @@ export const config = {
     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
   },
 }
+
+export const hasSupabaseConfig = Boolean(
+  config.integrations.supabaseUrl && config.integrations.supabaseAnonKey,
+)
+
+export const hasAiConfig = Boolean(config.ai.provider !== 'none' && config.ai.apiUrl)
 
 export const isProduction = import.meta.env.PROD
 export const isDevelopment = import.meta.env.DEV

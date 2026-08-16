@@ -137,6 +137,8 @@ export interface AuthSession {
   user: SessionUser | null
   status: 'authenticated' | 'anonymous' | 'not_configured'
   token?: string
+  provider?: 'supabase' | 'none'
+  expiresAt?: string
 }
 
 export interface SessionUser {
