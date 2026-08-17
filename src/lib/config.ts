@@ -28,7 +28,7 @@ export const config = {
   },
 
   ai: {
-    provider: (import.meta.env.VITE_AI_PROVIDER as 'none' | 'openai' | 'configured' | undefined) || 'none',
+    provider: (import.meta.env.VITE_AI_PROVIDER as 'none' | 'openai' | 'anthropic' | 'configured' | undefined) || 'none',
     model: import.meta.env.VITE_AI_MODEL || 'not-configured',
     apiUrl: import.meta.env.VITE_AI_API_URL || '',
   },
@@ -49,7 +49,9 @@ export const hasSupabaseConfig = Boolean(
   config.integrations.supabaseUrl && config.integrations.supabaseAnonKey,
 )
 
-export const hasAiConfig = Boolean(config.ai.provider !== 'none' && config.ai.apiUrl)
+export const hasAiConfig = Boolean(
+  config.ai.provider !== 'none' && config.ai.apiUrl && config.ai.model && config.ai.model !== 'not-configured',
+)
 
 export const isProduction = import.meta.env.PROD
 export const isDevelopment = import.meta.env.DEV

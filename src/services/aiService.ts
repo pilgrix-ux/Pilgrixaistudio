@@ -1,12 +1,13 @@
 /**
- * Editor-focused AI boundary.
+ * AI service boundary for the editor.
  *
- * This project intentionally keeps the in-app editor AI separate from the
- * AI Companion Hub chatbot experience. Real provider connections are disabled by
- * default and must be configured explicitly via environment variables.
+ * This layer intentionally does not hold provider secrets. It delegates to a
+ * provider-agnostic adapter that calls a secure server-side API endpoint. If the
+ * provider is not configured or the backend request fails, the service returns a
+ * typed failure state instead of fabricating a successful AI response.
  */
 
-import { config } from '@/lib/config'
+import { aiProvider } from '@/services/aiProvider'
 import type { AIAction } from '@/types'
 
 export const aiService = {
@@ -14,32 +15,25 @@ export const aiService = {
     assetId: string,
     action: string,
   ): Promise<AIAction> {
-    if (config.ai.provider === 'none') {
-      return {
-        id: `ai-action-${Date.now()}`,
-        type: 'not_configured',
-        params: { assetId, action, provider: config.ai.provider },
-        status: 'not_configured',
-        result: {
-          provider: config.ai.provider,
-          message: 'Editor AI is not configured for this environment.',
-        },
-      }
-    }
+    const execution = await aiProvider.execute({
+      assetId,
+      action,
+      prompt: `Apply the requested ${action} operation to asset ${assetId}.`,
+      context: {
+        source: 'editor-service',
+      },
+    })
 
-    return {
-      id: `ai-action-${Date.now()}`,
-      type: 'enhance',
-      params: { assetId, action, provider: config.ai.provider },
-      status: 'pending',
-    }
+    return execution
   },
 
   async getEditingSuggestions(): Promise<string[]> {
-    if (config.ai.provider === 'none') {
+    if (!aiProvider.isConfigured()) {
       return ['Editor AI is not configured for this environment.']
     }
 
-    return ['AI editing assistance is ready for provider integration.']
+    return [
+      'AI editing assistance is configured for the secure server-side boundary. Live suggestions require backend provider credentials and a valid upstream model endpoint.',
+    ]
   },
 }
