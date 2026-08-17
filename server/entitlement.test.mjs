@@ -1,185 +1,30 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import {
-  createEntitlementStore,
-  createFreeTierEntitlementService,
-  createPhoneVerificationService,
-  createTrialEligibilityService,
-  FREE_VIDEO_ALLOWANCE,
-} from './entitlement.mjs'
+import { createEntitlementStore, createFreeTierEntitlementService, createPhoneVerificationService, createTrialEligibilityService, FREE_VIDEO_ALLOWANCE } from './entitlement.mjs'
 import { createOtpService, createMemoryOtpStore } from './otp-service.mjs'
 import { createSecurityGate } from './security-gate.mjs'
 
-const makeSmsCapture = () => {
-  const messages = []
-  return {
-    messages,
-    sendSms: async (message) => messages.push(message),
-  }
-}
+const makeSmsCapture = () => { const messages = []; return { messages, sendSms: async (message) => messages.push(message) } }
 
-test('free users can consume exactly three videos', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  for (let i = 1; i <= FREE_VIDEO_ALLOWANCE; i += 1) {
-    const result = await service.consume({ userId: 'free-user', authenticated: true, plan: 'free' })
-    assert.equal(result.ok, true)
-    assert.equal(result.usage, i)
-  }
-  const blocked = await service.consume({ userId: 'free-user', authenticated: true, plan: 'free' })
-  assert.equal(blocked.ok, false)
-  assert.equal(blocked.status, 403)
-  assert.equal(blocked.error.code, 'entitlement_limit_exceeded')
-})
-
-test('unauthenticated requests are denied', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  const result = await service.consume({ userId: null, authenticated: false, plan: 'free' })
-  assert.equal(result.status, 401)
-  assert.equal(result.error.code, 'authentication_error')
-})
-
-test('paid users bypass the free allowance', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  const result = await service.consume({ userId: 'paid-user', authenticated: true, plan: 'pro' })
-  assert.equal(result.ok, true)
-  assert.equal(result.paidPlan, true)
-})
-
-test('client entitlement values are never trusted', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  const result = await service.consume({
-    userId: 'tamper-user', authenticated: true, plan: 'free',
-    clientEntitlement: { remaining: 999 },
-  })
-  assert.equal(result.status, 403)
-  assert.equal(result.error.code, 'client_entitlement_rejected')
-})
-
-test('same device across accounts is blocked as trial abuse', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  assert.equal((await service.consume({ userId: 'a', authenticated: true, plan: 'free', deviceId: 'shared' })).ok, true)
-  const result = await service.consume({ userId: 'b', authenticated: true, plan: 'free', deviceId: 'shared' })
-  assert.equal(result.status, 403)
-})
-
-test('same phone across accounts is blocked as trial abuse', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  assert.equal((await service.consume({ userId: 'a', authenticated: true, plan: 'free', phoneNumber: '+15550000001' })).ok, true)
-  const result = await service.consume({ userId: 'b', authenticated: true, plan: 'free', phoneNumber: '+15550000001' })
-  assert.equal(result.status, 403)
-})
-
-test('same account can legitimately change devices', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  assert.equal((await service.consume({ userId: 'same', authenticated: true, plan: 'free', deviceId: 'old' })).ok, true)
-  assert.equal((await service.consume({ userId: 'same', authenticated: true, plan: 'free', deviceId: 'new' })).ok, true)
-})
-
-test('concurrent requests cannot consume more than three free videos', async () => {
-  const service = createFreeTierEntitlementService({ store: createEntitlementStore() })
-  const results = await Promise.all(Array.from({ length: 8 }, () => service.consume({ userId: 'race', authenticated: true, plan: 'free' })))
-  assert.equal(results.filter((r) => r.ok).length, FREE_VIDEO_ALLOWANCE)
-  assert.equal(service.getUsage('race'), FREE_VIDEO_ALLOWANCE)
-})
-
-test('OTP request sends a message but never returns the code', async () => {
-  const capture = makeSmsCapture()
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms })
-  const result = await otp.request({ subject: 'otp-user', phoneNumber: '+15550000001' })
-  assert.equal(result.ok, true)
-  assert.equal('code' in result, false)
-  assert.equal(capture.messages.length, 1)
-  assert.match(capture.messages[0].message, /verification code is \d{6}/)
-})
-
-test('OTP verifies with the delivered code', async () => {
-  const capture = makeSmsCapture()
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms })
-  await otp.request({ subject: 'verify-user', phoneNumber: '+15550000001' })
-  const code = capture.messages[0].message.match(/(\d{6})$/)[1]
-  const result = otp.verify({ subject: 'verify-user', code })
-  assert.equal(result.ok, true)
-  assert.equal(result.verified, true)
-})
-
-test('OTP rejects an incorrect code', async () => {
-  const capture = makeSmsCapture()
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms })
-  await otp.request({ subject: 'wrong-user', phoneNumber: '+15550000001' })
-  const result = otp.verify({ subject: 'wrong-user', code: '000000' })
-  assert.equal(result.status, 401)
-})
-
-test('OTP cannot be guessed after the attempt limit', async () => {
-  const capture = makeSmsCapture()
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms, maxAttempts: 2 })
-  await otp.request({ subject: 'guess-user', phoneNumber: '+15550000001' })
-  assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 401)
-  assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 401)
-  assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 429)
-})
-
-test('failed SMS delivery removes the pending OTP', async () => {
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: async () => { throw new Error('provider down') } })
-  const result = await otp.request({ subject: 'delivery-user', phoneNumber: '+15550000001' })
-  assert.equal(result.status, 502)
-})
-
-test('OTP resend is rate limited', async () => {
-  const capture = makeSmsCapture()
-  const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms, resendCooldownMs: 60_000 })
-  assert.equal((await otp.request({ subject: 'resend-user', phoneNumber: '+15550000001' })).ok, true)
-  assert.equal((await otp.request({ subject: 'resend-user', phoneNumber: '+15550000001' })).status, 429)
-})
-
-test('phone verification service requires an injected server-side sender', () => {
-  assert.throws(() => createPhoneVerificationService({ store: createEntitlementStore() }), /server-side sendCode provider/)
-})
-
-test('phone verification service does not expose its OTP', async () => {
-  const capture = makeSmsCapture()
-  const verification = createPhoneVerificationService({ store: createEntitlementStore(), sendCode: async ({ code }) => capture.messages.push({ message: `code ${code}` }) })
-  const result = await verification.requestCode({ userId: 'phone-user', phoneNumber: '+15550000001', country: 'US' })
-  assert.equal(result.ok, true)
-  assert.equal('code' in result, false)
-})
-
-test('trial eligibility records identity collisions', () => {
-  const store = createEntitlementStore()
-  const eligibility = createTrialEligibilityService({ store })
-  const first = eligibility.evaluateSignals({ userId: 'one', deviceHash: 'device-hash' })
-  assert.equal(first.blocked, false)
-  eligibility.registerUsage({ userId: 'one', deviceHash: 'device-hash', consumedCount: 1 })
-  const second = eligibility.evaluateSignals({ userId: 'two', deviceHash: 'device-hash' })
-  assert.equal(second.blocked, true)
-  assert.ok(second.signals.includes('device-account-collision'))
-})
-
-test('security gate requires authentication', () => {
-  const gate = createSecurityGate({ sendSms: async () => {} })
-  const result = gate.authorizeVideo({ userId: null, authenticated: false })
-  assert.equal(result.status, 401)
-})
-
-test('security gate allows a normal free user', () => {
-  const gate = createSecurityGate({ sendSms: async () => {} })
-  const result = gate.authorizeVideo({ userId: 'normal', authenticated: true, plan: 'free' })
-  assert.equal(result.ok, true)
-  assert.equal(result.action, 'allow')
-})
-
-test('security gate detects reused device and requires verification', () => {
-  const gate = createSecurityGate({ sendSms: async () => {} })
-  gate.consumeVideo({ userId: 'first', requestId: 'req-1', deviceId: 'shared-device' })
-  const result = gate.authorizeVideo({ userId: 'second', authenticated: true, plan: 'free', deviceId: 'shared-device' })
-  assert.equal(result.action, 'verify_phone')
-})
-
-test('security gate makes trial consumption idempotent by request id', () => {
-  const gate = createSecurityGate({ sendSms: async () => {} })
-  const first = gate.consumeVideo({ userId: 'idempotent', requestId: 'same-request' })
-  const second = gate.consumeVideo({ userId: 'idempotent', requestId: 'same-request' })
-  assert.equal(first.ok, true)
-  assert.deepEqual(second, first)
-})
+test('free users can consume exactly three videos', async () => { const service = createFreeTierEntitlementService({ store: createEntitlementStore() }); for (let i = 1; i <= FREE_VIDEO_ALLOWANCE; i += 1) { const result = await service.consume({ userId: 'free-user', authenticated: true, plan: 'free' }); assert.equal(result.ok, true); assert.equal(result.usage, i) }; const blocked = await service.consume({ userId: 'free-user', authenticated: true, plan: 'free' }); assert.equal(blocked.ok, false); assert.equal(blocked.status, 403); assert.equal(blocked.error.code, 'entitlement_limit_exceeded') })
+test('unauthenticated requests are denied', async () => { const result = await createFreeTierEntitlementService({ store: createEntitlementStore() }).consume({ userId: null, authenticated: false, plan: 'free' }); assert.equal(result.status, 401); assert.equal(result.error.code, 'authentication_error') })
+test('paid users bypass the free allowance', async () => { const result = await createFreeTierEntitlementService({ store: createEntitlementStore() }).consume({ userId: 'paid-user', authenticated: true, plan: 'pro' }); assert.equal(result.ok, true); assert.equal(result.paidPlan, true) })
+test('client entitlement values are never trusted', async () => { const result = await createFreeTierEntitlementService({ store: createEntitlementStore() }).consume({ userId: 'tamper-user', authenticated: true, plan: 'free', clientEntitlement: { remaining: 999 } }); assert.equal(result.status, 403); assert.equal(result.error.code, 'client_entitlement_rejected') })
+test('same device across accounts is blocked as trial abuse', async () => { const service = createFreeTierEntitlementService({ store: createEntitlementStore() }); assert.equal((await service.consume({ userId: 'a', authenticated: true, plan: 'free', deviceId: 'shared' })).ok, true); assert.equal((await service.consume({ userId: 'b', authenticated: true, plan: 'free', deviceId: 'shared' })).status, 403) })
+test('same phone across accounts is blocked as trial abuse', async () => { const service = createFreeTierEntitlementService({ store: createEntitlementStore() }); assert.equal((await service.consume({ userId: 'a', authenticated: true, plan: 'free', phoneNumber: '+15550000001' })).ok, true); assert.equal((await service.consume({ userId: 'b', authenticated: true, plan: 'free', phoneNumber: '+15550000001' })).status, 403) })
+test('same account can legitimately change devices', async () => { const service = createFreeTierEntitlementService({ store: createEntitlementStore() }); assert.equal((await service.consume({ userId: 'same', authenticated: true, plan: 'free', deviceId: 'old' })).ok, true); assert.equal((await service.consume({ userId: 'same', authenticated: true, plan: 'free', deviceId: 'new' })).ok, true) })
+test('concurrent requests cannot consume more than three free videos', async () => { const service = createFreeTierEntitlementService({ store: createEntitlementStore() }); const results = await Promise.all(Array.from({ length: 8 }, () => service.consume({ userId: 'race', authenticated: true, plan: 'free' }))); assert.equal(results.filter((r) => r.ok).length, FREE_VIDEO_ALLOWANCE); assert.equal(service.getUsage('race'), FREE_VIDEO_ALLOWANCE) })
+test('OTP request sends a message but never returns the code', async () => { const capture = makeSmsCapture(); const result = await createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms }).request({ subject: 'otp-user', phoneNumber: '+15550000001' }); assert.equal(result.ok, true); assert.equal('code' in result, false); assert.equal(capture.messages.length, 1); assert.match(capture.messages[0].message, /verification code is:\s*\d{6}/) })
+test('OTP verifies with the delivered code', async () => { const capture = makeSmsCapture(); const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms }); await otp.request({ subject: 'verify-user', phoneNumber: '+15550000001' }); const code = capture.messages[0].message.match(/(\d{6})$/)[1]; assert.equal(otp.verify({ subject: 'verify-user', code }).verified, true) })
+test('OTP rejects an incorrect code', async () => { const capture = makeSmsCapture(); const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms }); await otp.request({ subject: 'wrong-user', phoneNumber: '+15550000001' }); assert.equal(otp.verify({ subject: 'wrong-user', code: '000000' }).status, 401) })
+test('OTP cannot be guessed after the attempt limit', async () => { const capture = makeSmsCapture(); const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms, maxAttempts: 2 }); await otp.request({ subject: 'guess-user', phoneNumber: '+15550000001' }); assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 401); assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 401); assert.equal(otp.verify({ subject: 'guess-user', code: '000000' }).status, 429) })
+test('failed SMS delivery removes the pending OTP', async () => { const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: async () => { throw new Error('provider down') } }); assert.equal((await otp.request({ subject: 'delivery-user', phoneNumber: '+15550000001' })).status, 502) })
+test('OTP resend is rate limited', async () => { const capture = makeSmsCapture(); const otp = createOtpService({ store: createMemoryOtpStore(), sendSms: capture.sendSms, resendCooldownMs: 60_000 }); assert.equal((await otp.request({ subject: 'resend-user', phoneNumber: '+15550000001' })).ok, true); assert.equal((await otp.request({ subject: 'resend-user', phoneNumber: '+15550000001' })).status, 429) })
+test('phone verification service requires an injected server-side sender', () => { assert.throws(() => createPhoneVerificationService({ store: createEntitlementStore() }), /server-side sendCode provider/) })
+test('phone verification service does not expose its OTP', async () => { const capture = makeSmsCapture(); const result = await createPhoneVerificationService({ store: createEntitlementStore(), sendCode: async ({ code }) => capture.messages.push({ message: `code ${code}` }) }).requestCode({ userId: 'phone-user', phoneNumber: '+15550000001', country: 'US' }); assert.equal(result.ok, true); assert.equal('code' in result, false) })
+test('trial eligibility records identity collisions', () => { const store = createEntitlementStore(); const eligibility = createTrialEligibilityService({ store }); assert.equal(eligibility.evaluateSignals({ userId: 'one', deviceHash: 'device-hash' }).blocked, false); eligibility.registerUsage({ userId: 'one', deviceHash: 'device-hash', consumedCount: 1 }); const second = eligibility.evaluateSignals({ userId: 'two', deviceHash: 'device-hash' }); assert.equal(second.blocked, true); assert.ok(second.signals.includes('device-account-collision')) })
+test('security gate requires authentication', () => { const result = createSecurityGate({ sendSms: async () => {} }).authorizeVideo({ userId: null, authenticated: false }); assert.equal(result.status, 401) })
+test('security gate allows a normal free user', () => { const result = createSecurityGate({ sendSms: async () => {} }).authorizeVideo({ userId: 'normal', authenticated: true, plan: 'free' }); assert.equal(result.ok, true); assert.equal(result.action, 'allow') })
+test('security gate detects reused device and requires verification', () => { const gate = createSecurityGate({ sendSms: async () => {} }); gate.consumeVideo({ userId: 'first', requestId: 'req-1', deviceId: 'shared-device' }); assert.equal(gate.authorizeVideo({ userId: 'second', authenticated: true, plan: 'free', deviceId: 'shared-device' }).action, 'verify_phone') })
+test('security gate makes trial consumption idempotent by request id', () => { const gate = createSecurityGate({ sendSms: async () => {} }); const first = gate.consumeVideo({ userId: 'idempotent', requestId: 'same-request' }); const second = gate.consumeVideo({ userId: 'idempotent', requestId: 'same-request' }); assert.equal(first.ok, true); assert.deepEqual(second, first) })
