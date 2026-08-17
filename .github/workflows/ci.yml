@@ -26,6 +26,9 @@ jobs:
       - name: Run TypeScript check
         run: npm run type-check
 
+      - name: Run server security tests
+        run: npm run test:server
+
       - name: Run lint
         run: npm run lint
 
