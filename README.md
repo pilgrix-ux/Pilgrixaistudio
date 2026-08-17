@@ -146,12 +146,15 @@ Configure the application via `.env.local`:
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_OPENAI_API_KEY=
+VITE_AI_PROVIDER=none
 VITE_AI_API_URL=
+VITE_AI_MODEL=not-configured
 VITE_STORAGE_BUCKET=
 VITE_MAX_FILE_SIZE=104857600
 VITE_API_BASE_URL=http://localhost:3000
 ```
+
+Keep provider secrets out of browser-facing `VITE_` variables. The AI provider key, model secret, and private credentials must be configured on the server-side API boundary instead.
 
 See `.env.example` for all available variables.
 

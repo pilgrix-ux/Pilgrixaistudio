@@ -1,6 +1,8 @@
 export type ProjectStatus = 'draft' | 'active' | 'archived'
 export type MediaType = 'image' | 'video' | 'audio' | 'document'
 export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled'
+export type AIProviderName = 'none' | 'openai' | 'anthropic' | 'configured'
+export type AIConfigurationStatus = 'not_configured' | 'configured'
 export type EditorOperationType =
   | 'enhance'
   | 'resize'
@@ -164,12 +166,21 @@ export interface EditorState {
   error: string | null
 }
 
+export interface AIActionResult {
+  provider?: AIProviderName
+  model?: string
+  message: string
+  output?: unknown
+  error?: Partial<ApiError>
+}
+
 export interface AIAction {
   id: string
   type: EditorOperationType
   params: Record<string, unknown>
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'not_configured'
-  result?: unknown
+  configuration: AIConfigurationStatus
+  status: 'pending' | 'processing' | 'succeeded' | 'completed' | 'failed' | 'not_configured'
+  result?: AIActionResult
 }
 
 export interface User {

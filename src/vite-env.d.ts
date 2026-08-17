@@ -7,7 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_API_MODE?: 'local-dev' | 'remote'
   readonly VITE_AUTH_PROVIDER?: 'none' | 'supabase'
   readonly VITE_AUTH_SESSION_STORAGE_KEY?: string
-  readonly VITE_AI_PROVIDER?: 'none' | 'openai' | 'configured'
+  readonly VITE_AI_PROVIDER?: 'none' | 'openai' | 'anthropic' | 'configured'
   readonly VITE_AI_API_URL?: string
   readonly VITE_AI_MODEL?: string
   readonly VITE_STORAGE_PROVIDER?: 'none' | 'local-dev' | 'supabase' | 's3'
