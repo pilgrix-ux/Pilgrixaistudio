@@ -41,8 +41,6 @@ export function createEntitlementStore(initialRows = []) {
   }
 }
 
-// OTP delivery/verification is owned by server/otp-service.mjs. This compatibility service
-// never returns an OTP to callers; the provider receives it server-side only.
 export function createPhoneVerificationService({ store = createEntitlementStore(), rules = DEFAULT_FREE_TIER_RULES, sendCode } = {}) {
   if (typeof sendCode !== 'function') throw new Error('Phone verification requires a server-side sendCode provider.')
   const records = new Map()
@@ -59,36 +57,21 @@ export function createPhoneVerificationService({ store = createEntitlementStore(
       const code = crypto.randomInt(100000, 1000000).toString()
       const expiresAt = now + rules.phoneVerificationCodeTtlMs
       records.set(key, { codeHash: hashPrivacySignal(`${code}:${userId}:${phoneHash}`), expiresAt, attempts: 0, sentAt: now })
-      try {
-        await sendCode({ phoneNumber, country, code, expiresAt: new Date(expiresAt).toISOString() })
-      } catch {
-        records.delete(key)
-        return { ok: false, status: 502, error: { code: 'delivery_failed', userMessage: 'We could not send the verification message. Please try again.' } }
-      }
+      try { await sendCode({ phoneNumber, country, code, expiresAt: new Date(expiresAt).toISOString() }) } catch { records.delete(key); return { ok: false, status: 502, error: { code: 'delivery_failed', userMessage: 'We could not send the verification message. Please try again.' } }
       store.appendAuditEvent({ type: 'phone_verification_requested', user_id: userId, phone_hash: phoneHash, phone_country: String(country).trim().toUpperCase() || null, device_hash: hashPrivacySignal(deviceId), network_hash: hashPrivacySignal(networkId) })
       return { ok: true, status: 200, expiresAt: new Date(expiresAt).toISOString() }
     },
     verifyCode({ userId, phoneNumber, country = '', code, deviceId = '', networkId = '' }) {
       const phoneHash = hashPrivacySignal(phoneNumber)
       if (!userId || !phoneHash || !code) return { ok: false, status: 400, error: { code: 'validation_error', userMessage: 'Verification failed. Please request a fresh code.' } }
-      const key = keyFor({ userId, phoneNumber, country })
-      const record = records.get(key)
+      const key = keyFor({ userId, phoneNumber, country }), record = records.get(key)
       if (!record) return { ok: false, status: 404, error: { code: 'not_found', userMessage: 'No pending verification was found. Try requesting a code again.' } }
-      if (Date.now() >= record.expiresAt) {
-        records.delete(key)
-        return { ok: false, status: 410, error: { code: 'verification_expired', userMessage: 'The verification code has expired. Please request a new one.' } }
-      }
+      if (Date.now() >= record.expiresAt) { records.delete(key); return { ok: false, status: 410, error: { code: 'verification_expired', userMessage: 'The verification code has expired. Please request a new one.' } }
       const attempts = record.attempts + 1
-      if (attempts > rules.maxVerificationAttempts) {
-        records.delete(key)
-        return { ok: false, status: 429, error: { code: 'rate_limited', userMessage: 'Too many attempts. Please request a new code later.' } }
-      }
+      if (attempts > rules.maxVerificationAttempts) { records.delete(key); return { ok: false, status: 429, error: { code: 'rate_limited', userMessage: 'Too many attempts. Please request a new code later.' } }
       const expected = hashPrivacySignal(`${String(code).trim()}:${userId}:${phoneHash}`)
       records.set(key, { ...record, attempts })
-      if (expected !== record.codeHash) {
-        store.appendAuditEvent({ type: 'phone_verification_failed', user_id: userId, phone_hash: phoneHash, phone_country: String(country).trim().toUpperCase() || null, device_hash: hashPrivacySignal(deviceId), network_hash: hashPrivacySignal(networkId), attempts })
-        return { ok: false, status: 401, error: { code: 'authentication_error', userMessage: 'That code didn’t match. Please try again.' } }
-      }
+      if (expected !== record.codeHash) { store.appendAuditEvent({ type: 'phone_verification_failed', user_id: userId, phone_hash: phoneHash, phone_country: String(country).trim().toUpperCase() || null, device_hash: hashPrivacySignal(deviceId), network_hash: hashPrivacySignal(networkId), attempts }); return { ok: false, status: 401, error: { code: 'authentication_error', userMessage: 'That code didn’t match. Please try again.' } }
       records.delete(key)
       store.appendAuditEvent({ type: 'phone_verification_succeeded', user_id: userId, phone_hash: phoneHash, phone_country: String(country).trim().toUpperCase() || null, device_hash: hashPrivacySignal(deviceId), network_hash: hashPrivacySignal(networkId) })
       return { ok: true, status: 200, verified: true }
@@ -114,7 +97,7 @@ export function createTrialEligibilityService({ store = createEntitlementStore()
       if (!hash) continue
       const key = `${kind}:${hash}`
       const record = store.getTrialRecord(key) ?? { key, user_ids: [], consumed_count: 0 }
-      store.upsertTrialRecord(key, { ...record, user_ids: Array.from(new Set([...(record.user_ids ?? []), userId])), consumed_count: Math.max(Number(record.consumed_count || 0), Number(consumedCount || 0)) })
+      store.upsertTrialRecord(key, { ...record, user_ids: Array.from(new Set([...(record.user_ids ?? []), userId])), consumedCount: Math.max(Number(record.consumed_count || 0), Number(consumedCount || 0)) })
     }
   }
   return { evaluateSignals, registerUsage }
@@ -123,32 +106,38 @@ export function createTrialEligibilityService({ store = createEntitlementStore()
 export function createFreeTierEntitlementService({ store = createEntitlementStore(), freeVideoAllowance = FREE_VIDEO_ALLOWANCE, rules = DEFAULT_FREE_TIER_RULES } = {}) {
   const locks = new Map()
   const trialEligibility = createTrialEligibilityService({ store, rules: { ...rules, freeVideoAllowance } })
-  const withLock = async (userId, fn) => {
-    const previous = locks.get(userId) ?? Promise.resolve()
-    let release
-    const next = new Promise((resolve) => { release = resolve })
-    locks.set(userId, next)
-    await previous
-    try { return await fn() } finally { release(); if (locks.get(userId) === next) locks.delete(userId) }
+  const withLock = async (userId, fn) => { const previous = locks.get(userId) ?? Promise.resolve(); let release; const next = new Promise((resolve) => { release = resolve }); locks.set(userId, next); await previous; try { return await fn() } finally { release(); if (locks.get(userId) === next) locks.delete(userId) } }
+  const authorize = ({ userId, authenticated, plan = 'free', deviceId, networkId, phoneNumber, email, accountDeleted = false, suspiciousVerification = false, clientEntitlement } = {}) => {
+    if (!authenticated || !userId) return { ok: false, status: 401, error: buildEntitlementError({ code: 'authentication_error', message: 'Authentication is required.', userMessage: 'Please sign in to continue.', status: 401 }) }
+    if (typeof clientEntitlement !== 'undefined') return { ok: false, status: 403, error: buildEntitlementError({ code: 'client_entitlement_rejected', message: 'Client entitlement values are not trusted.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }) }
+    if (plan !== 'free') return { ok: true, status: 200, usage: this?.getUsage?.(userId) ?? Number(store.getUser(userId)?.video_count ?? 0), remaining: null, limit: null, upgradeRequired: false, paidPlan: true }
+    const row = store.getUser(userId) ?? { user_id: userId, plan: 'free', video_count: 0 }
+    const current = Number(row.video_count || 0)
+    const decision = trialEligibility.evaluateSignals({ userId, phoneHash: hashPrivacySignal(phoneNumber), deviceHash: hashPrivacySignal(deviceId), networkHash: hashPrivacySignal(networkId), emailHash: hashPrivacySignal(email), previousTrialCount: current, accountDeleted, suspiciousVerification })
+    if (current >= freeVideoAllowance) return { ok: false, status: 403, error: buildEntitlementError({ code: 'entitlement_limit_exceeded', message: 'Free trial allowance exhausted.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), usage: current, remaining: 0, limit: freeVideoAllowance, upgradeRequired: true }
+    if (decision.blocked) return { ok: false, status: 403, error: buildEntitlementError({ code: 'trial_locked', message: 'Free trial blocked by abuse risk.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), usage: current, remaining: freeVideoAllowance - current, limit: freeVideoAllowance, upgradeRequired: true, riskScore: decision.riskScore, signals: decision.signals }
+    return { ok: true, status: 200, usage: current, remaining: freeVideoAllowance - current, limit: freeVideoAllowance, upgradeRequired: false, paidPlan: false }
+  }
+  const consume = async ({ userId, authenticated, plan = 'free', requestId, deviceId, networkId, phoneNumber, email, accountDeleted = false, suspiciousVerification = false, clientEntitlement } = {}) => {
+    const authz = authorize({ userId, authenticated, plan, deviceId, networkId, phoneNumber, email, accountDeleted, suspiciousVerification, clientEntitlement })
+    if (!authz.ok) return { ...authz, requestId }
+    if (authz.paidPlan) return { ...authz, requestId }
+    return withLock(userId, async () => {
+      const requestKey = requestId ? `request:${requestId}` : null
+      if (requestKey && store.getTrialRecord(requestKey)?.consumed) return { ok: true, status: 200, requestId, usage: Number(store.getUser(userId)?.video_count ?? 0), remaining: Math.max(0, freeVideoAllowance - Number(store.getUser(userId)?.video_count ?? 0)), limit: freeVideoAllowance, upgradeRequired: false, idempotent: true }
+      const row = store.getUser(userId) ?? store.upsertUser(userId, { user_id: userId, plan: 'free', video_count: 0 })
+      const current = Number(row.video_count || 0)
+      if (current >= freeVideoAllowance) return { ok: false, status: 403, error: buildEntitlementError({ code: 'entitlement_limit_exceeded', message: 'Free trial allowance exhausted.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), requestId, usage: current, remaining: 0, limit: freeVideoAllowance, upgradeRequired: true }
+      const nextUsage = current + 1
+      store.upsertUser(userId, { ...row, plan: 'free', video_count: nextUsage })
+      trialEligibility.registerUsage({ userId, phoneHash: hashPrivacySignal(phoneNumber), deviceHash: hashPrivacySignal(deviceId), networkHash: hashPrivacySignal(networkId), emailHash: hashPrivacySignal(email), consumedCount: nextUsage })
+      if (requestKey) store.upsertTrialRecord(requestKey, { consumed: true, user_ids: [userId] })
+      return { ok: true, status: 200, requestId, usage: nextUsage, remaining: freeVideoAllowance - nextUsage, limit: freeVideoAllowance, upgradeRequired: false }
+    })
   }
   return {
     getUsage: (userId) => Number(store.getUser(userId)?.video_count ?? 0),
-    async consume({ userId, authenticated, plan = 'free', requestId, deviceId, networkId, phoneNumber, email, accountDeleted = false, suspiciousVerification = false, clientEntitlement } = {}) {
-      if (!authenticated || !userId) return { ok: false, status: 401, error: buildEntitlementError({ code: 'authentication_error', message: 'Authentication is required.', userMessage: 'Please sign in to continue.', status: 401 }), requestId }
-      if (plan !== 'free') return { ok: true, status: 200, usage: this.getUsage(userId), remaining: null, limit: null, upgradeRequired: false, paidPlan: true }
-      return withLock(userId, async () => {
-        if (typeof clientEntitlement !== 'undefined') return { ok: false, status: 403, error: buildEntitlementError({ code: 'client_entitlement_rejected', message: 'Client entitlement values are not trusted.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), requestId }
-        const row = store.getUser(userId) ?? store.upsertUser(userId, { user_id: userId, plan: 'free', video_count: 0 })
-        const current = Number(row.video_count || 0)
-        const decision = trialEligibility.evaluateSignals({ userId, phoneHash: hashPrivacySignal(phoneNumber), deviceHash: hashPrivacySignal(deviceId), networkHash: hashPrivacySignal(networkId), emailHash: hashPrivacySignal(email), previousTrialCount: current, accountDeleted, suspiciousVerification })
-        if (current >= freeVideoAllowance) return { ok: false, status: 403, error: buildEntitlementError({ code: 'entitlement_limit_exceeded', message: 'Free trial allowance exhausted.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), requestId, usage: current, remaining: 0, limit: freeVideoAllowance, upgradeRequired: true }
-        if (decision.blocked) return { ok: false, status: 403, error: buildEntitlementError({ code: 'trial_locked', message: 'Free trial blocked by abuse risk.', userMessage: DEFAULT_UPGRADE_MESSAGE, status: 403 }), requestId, usage: current, remaining: freeVideoAllowance - current, limit: freeVideoAllowance, upgradeRequired: true, riskScore: decision.riskScore, signals: decision.signals }
-        const nextUsage = current + 1
-        store.upsertUser(userId, { ...row, plan: 'free', video_count: nextUsage })
-        trialEligibility.registerUsage({ userId, phoneHash: hashPrivacySignal(phoneNumber), deviceHash: hashPrivacySignal(deviceId), networkHash: hashPrivacySignal(networkId), emailHash: hashPrivacySignal(email), consumedCount: nextUsage })
-        if (requestId) store.upsertTrialRecord(`request:${requestId}`, { consumed: true, user_ids: [userId] })
-        return { ok: true, status: 200, requestId, usage: nextUsage, remaining: freeVideoAllowance - nextUsage, limit: freeVideoAllowance, upgradeRequired: false }
-      })
-    },
+    authorize,
+    consume,
   }
 }
