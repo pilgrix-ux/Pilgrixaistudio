@@ -43,19 +43,20 @@ async function processJob(job, { body, auth, callProvider, consumeEntitlement, r
     await store.transition(job.id, 'planning', 50)
     const plan = buildEditPlan({ instruction: job.instruction, sourceAnalysis, referenceAnalysis, capabilityReport })
     const ai = await callProvider(JSON.stringify({ instruction: job.instruction, sourceAnalysis, referenceAnalysis, capabilityReport }), 'build-edit-plan', { precision: 'millisecond', neverInventMissingFootage: true })
-    if (!ai.ok) throw new Error(ai.error?.message || ai.error?.userMessage || 'AI planning failed')
-    plan.ai = ai.data
-    const validatedPlan = validateEditPlan(plan, { durationMs: sourceAnalysis.durationMs })
+    if (!ai.ok) throw Object.assign(new Error(ai.error?.message || ai.error?.userMessage || 'AI planning failed'), { code: ai.error?.code || 'planning_failed' })
+    const aiOutput = ai.data?.output && typeof ai.data.output === 'object' ? ai.data.output : ai.data
+    const operations = Array.isArray(aiOutput?.operations) ? aiOutput.operations : []
+    const executablePlan = { ...plan, ...(aiOutput && typeof aiOutput === 'object' ? aiOutput : {}), operations, ai: { provider: ai.data?.provider, model: ai.data?.model } }
+    const validatedPlan = validateEditPlan(executablePlan, { durationMs: sourceAnalysis.durationMs })
     await store.save({ ...(await store.get(job.id)), editPlan: validatedPlan })
     await store.transition(job.id, 'processing', 70)
     await store.transition(job.id, 'rendering', 90)
     if (typeof renderVideo !== 'function') throw Object.assign(new Error('A render worker is not configured yet.'), { code: 'renderer_unavailable' })
-    const sourcePath = body.sourcePath
-    const outputPath = body.outputPath
-    if (!sourcePath || !outputPath) throw Object.assign(new Error('Render media paths are not configured.'), { code: 'render_media_missing' })
-    const rendered = await renderVideo({ inputPath: sourcePath, outputPath, plan: validatedPlan })
+    if (!body.sourcePath || !body.outputPath) throw Object.assign(new Error('Render media paths are not configured.'), { code: 'render_media_missing' })
+    const rendered = await renderVideo({ inputPath: body.sourcePath, outputPath: body.outputPath, plan: validatedPlan })
+    if (!rendered?.outputPath) throw Object.assign(new Error('Renderer returned no output file.'), { code: 'render_output_missing' })
     const current = await store.get(job.id)
-    await store.save({ ...current, state: 'completed', progress: 100, output: { status: 'ready', renderer: 'ffmpeg', path: rendered.outputPath, planVersion: validatedPlan.version } })
+    await store.save({ ...current, state: 'completed', progress: 100, output: { status: 'ready', renderer: rendered.renderer || 'ffmpeg', path: rendered.outputPath, planVersion: validatedPlan.version } })
     await consumeEntitlement(auth, { requestId: job.id })
   } catch (error) {
     const current = await store.get(job.id)
