@@ -5,6 +5,7 @@ import { getBearerToken, verifySupabaseAccessToken } from './auth.mjs'
 import { createSecurityGate } from './security-gate.mjs'
 import { createSmsProvider } from './sms-provider.mjs'
 import { createPersistentSecurityStore, isPersistentSecurityStateConfigured } from './persistent-security-store.mjs'
+import { createRuntimeConfigService } from './runtime-config.mjs'
 
 const PORT = Number(process.env.AI_BACKEND_PORT || 3001)
 const AI_PROVIDER = process.env.AI_PROVIDER || 'none'; const AI_API_URL = process.env.AI_API_URL || ''; const AI_MODEL = process.env.AI_MODEL || 'not-configured'; const AI_API_KEY = process.env.AI_API_KEY || ''; const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 20000)
@@ -12,11 +13,12 @@ const rateLimitStore = new Map()
 const freeVideoAllowance = Number.parseInt(process.env.FREE_VIDEO_ALLOWANCE || String(FREE_VIDEO_ALLOWANCE), 10)
 const entitlementService = isPersistentEntitlementConfigured() ? createPersistentEntitlementService({ freeVideoAllowance }) : createFreeTierEntitlementService({ freeVideoAllowance })
 const securityStore = isPersistentSecurityStateConfigured() ? createPersistentSecurityStore() : new Map()
+const runtimeConfig = createRuntimeConfigService()
 if (!isPersistentSecurityStateConfigured() || !isPersistentEntitlementConfigured()) console.warn('Production persistence is not fully configured; set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before production.')
 const securityGate = createSecurityGate({ store: securityStore, sendSms: async ({ phoneNumber, message }) => { if (!process.env.INFOBIP_API_KEY) throw new Error('INFOBIP_API_KEY is not configured'); return createSmsProvider().sendSms({ phoneNumber, message }) } })
 const fromEnv = (name, fallback) => { const value = Number.parseInt(process.env[name] || String(fallback), 10); return Number.isFinite(value) ? value : fallback }
 const signupRateLimit = { maxPerWindow: fromEnv('FREE_TRIAL_SIGNUP_RATE_LIMIT', 5), windowMs: fromEnv('FREE_TRIAL_SIGNUP_RATE_WINDOW_MS', 60_000) }; const videoRateLimit = { maxPerWindow: fromEnv('FREE_TRIAL_VIDEO_RATE_LIMIT', 20), windowMs: fromEnv('FREE_TRIAL_VIDEO_RATE_WINDOW_MS', 60_000) }
-const sendJson = (res, statusCode, body) => { res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || 'http://localhost:5173', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Device-Id,X-Network-Id' }); res.end(JSON.stringify(body)) }
+const sendJson = (res, statusCode, body) => { res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || 'http://localhost:5173', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Device-Id,X-Network-Id' }); res.end(JSON.stringify(body)) }
 const parseBody = async (req) => { if (req.method === 'GET') return {}; const chunks = []; for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); if (!chunks.length) return {}; try { return JSON.parse(Buffer.concat(chunks).toString('utf8')) } catch { return {} } }
 const getRateLimitKey = (req, auth, type) => `${type}:${hashPrivacySignal(auth?.userId || req.headers['x-forwarded-for'] || req.headers['user-agent'] || 'anonymous') || 'anon'}`
 const checkRateLimit = (req, auth, config, type) => { const key = getRateLimitKey(req, auth, type); const now = Date.now(); const bucket = rateLimitStore.get(key) ?? []; const recent = bucket.filter((timestamp) => now - timestamp < config.windowMs); if (recent.length >= config.maxPerWindow) return { allowed: false, retryAfterMs: config.windowMs - (now - recent[0]) }; recent.push(now); rateLimitStore.set(key, recent); return { allowed: true, retryAfterMs: 0 } }
@@ -27,11 +29,26 @@ const entitlementView = (result) => ({ used: result.usage, remaining: result.rem
 const authorizeEntitlement = async (auth) => entitlementService.authorize({ userId: auth.userId, authenticated: true, plan: getPlanFromClaims(auth.claims) })
 const consumeEntitlement = async (auth, body) => entitlementService.consume({ userId: auth.userId, authenticated: true, plan: getPlanFromClaims(auth.claims), requestId: typeof body.requestId === 'string' ? body.requestId : undefined })
 const getProviderConfig = () => ({ provider: AI_PROVIDER !== 'none' && AI_API_URL && AI_MODEL !== 'not-configured' ? AI_PROVIDER : 'none', apiUrl: AI_API_URL, model: AI_MODEL, configured: AI_PROVIDER !== 'none' && Boolean(AI_API_URL) && AI_MODEL !== 'not-configured' })
+const isRuntimeConfigAdmin = (auth) => { const allowedIds = String(process.env.RUNTIME_CONFIG_ADMIN_USER_IDS || '').split(',').map((value) => value.trim()).filter(Boolean); const role = auth?.claims?.app_metadata?.role || auth?.claims?.user_role; return role === 'admin' || allowedIds.includes(auth?.userId) }
 const callProvider = async (prompt, action, context) => { if (AI_PROVIDER === 'none' || !AI_API_URL || AI_MODEL === 'not-configured') return { ok: false, error: { code: 'configuration_error', userMessage: 'The AI provider has not been configured on the server yet.', status: 503, retryable: false } }; if (!AI_API_KEY) return { ok: false, error: { code: 'authentication_error', userMessage: 'The backend is missing the required AI provider credentials.', status: 401, retryable: false } }; const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS); try { const response = await fetch(AI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AI_API_KEY}` }, body: JSON.stringify({ model: AI_MODEL, input: prompt, action, context }), signal: controller.signal }); const payload = await response.json().catch(() => ({})); if (!response.ok) return { ok: false, error: { code: 'provider_failure', userMessage: 'The AI request failed. Please try again.', status: response.status, retryable: true } }; return { ok: true, data: { provider: AI_PROVIDER, model: AI_MODEL, message: payload?.message || 'AI request succeeded.', output: payload?.output ?? payload?.content ?? payload } } } catch (error) { return { ok: false, error: { code: error?.name === 'AbortError' ? 'timeout_error' : 'provider_failure', userMessage: error?.name === 'AbortError' ? 'The AI request took too long. Please try again.' : 'The AI request failed. Please try again.', status: error?.name === 'AbortError' ? 504 : 502, retryable: true } } } finally { clearTimeout(timeout) } }
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return sendJson(res, 204, {})
   const url = new URL(req.url, `http://${req.headers.host}`)
+
+  if (url.pathname === '/api/runtime-config' && req.method === 'GET') {
+    return sendJson(res, 200, { ok: true, config: await runtimeConfig.read() })
+  }
+
+  if (url.pathname === '/api/runtime-config' && req.method === 'PATCH') {
+    const auth = await authenticate(req)
+    if (!auth.ok) return sendJson(res, auth.status, { ok: false, error: auth.error })
+    if (!isRuntimeConfigAdmin(auth)) return sendJson(res, 403, { ok: false, error: { code: 'forbidden', userMessage: 'You are not allowed to change runtime configuration.', status: 403, retryable: false } })
+    const body = await parseBody(req)
+    if (!body.patch || typeof body.patch !== 'object' || Array.isArray(body.patch)) return sendJson(res, 400, { ok: false, error: { code: 'validation_error', userMessage: 'A configuration patch is required.', status: 400, retryable: false } })
+    try { return sendJson(res, 200, { ok: true, config: await runtimeConfig.write(body.patch) }) } catch (error) { return sendJson(res, 503, { ok: false, error: { code: 'configuration_unavailable', message: error?.message || 'Runtime configuration is unavailable.', userMessage: 'Configuration storage is not available yet.', status: 503, retryable: true } }) }
+  }
+
   if (url.pathname === '/api/ai/config' && req.method === 'GET') return sendJson(res, 200, getProviderConfig())
   if (url.pathname === '/api/auth/signup') { const rate = checkRateLimit(req, null, signupRateLimit, 'signup'); if (!rate.allowed) return sendJson(res, 429, { ok: false, error: { code: 'rate_limited', userMessage: 'Too many sign-up attempts were made. Please wait and try again.', status: 429, retryable: true, retryAfterMs: rate.retryAfterMs } }); return sendJson(res, 200, { ok: true, data: { accepted: true, freeTrial: { limit: FREE_VIDEO_ALLOWANCE, remaining: FREE_VIDEO_ALLOWANCE } } }) }
   const protectedRoute = ['/api/security/otp/request', '/api/security/otp/verify', '/api/video/process', '/api/ai/execute'].includes(url.pathname); if (!protectedRoute) return sendJson(res, 404, { ok: false, error: { code: 'not_found', userMessage: 'The requested backend route was not found.', status: 404, retryable: false } })
