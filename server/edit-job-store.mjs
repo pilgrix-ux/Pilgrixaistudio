@@ -5,12 +5,15 @@ export function createEditJobStore({ persistence } = {}) {
 
   async function create(input) {
     const job = createEditJob(input)
-    await save(job)
-    return job
+    return save(job)
   }
 
   async function get(id) {
-    if (persistence?.get) return persistence.get(id)
+    if (persistence?.get) {
+      const persisted = await persistence.get(id)
+      if (persisted) memory.set(id, persisted)
+      return persisted ?? memory.get(id) ?? null
+    }
     return memory.get(id) ?? null
   }
 
