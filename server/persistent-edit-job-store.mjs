@@ -1,4 +1,4 @@
-import { createEditJobStore } from './edit-job-store.mjs'
+import { createEditJob, transitionJob } from './edit-engine.mjs'
 
 const configured = () => Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
 const headers = () => ({ apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' })
@@ -6,7 +6,6 @@ const headers = () => ({ apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authoriz
 export function isPersistentEditJobStoreConfigured() { return configured() }
 
 export function createPersistentEditJobStore() {
-  const fallback = createEditJobStore()
   const base = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/edit_jobs`
 
   const request = async (url, options = {}) => {
@@ -17,7 +16,7 @@ export function createPersistentEditJobStore() {
 
   return {
     async create(input) {
-      const job = await fallback.create(input)
+      const job = createEditJob(input)
       await request(base, { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(toRow(job)) })
       return job
     },
@@ -33,9 +32,7 @@ export function createPersistentEditJobStore() {
     async transition(id, state, progress) {
       const job = await this.get(id)
       if (!job) throw new Error('Edit job not found')
-      const updated = await fallback.transition(id, state, progress)
-      await this.save(updated)
-      return updated
+      return this.save(transitionJob(job, state, progress))
     },
   }
 }
