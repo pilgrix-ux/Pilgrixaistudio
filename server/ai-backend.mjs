@@ -11,9 +11,10 @@ const PORT = Number(process.env.AI_BACKEND_PORT || 3001)
 const AI_PROVIDER = process.env.AI_PROVIDER || 'none'; const AI_API_URL = process.env.AI_API_URL || ''; const AI_MODEL = process.env.AI_MODEL || 'not-configured'; const AI_API_KEY = process.env.AI_API_KEY || ''; const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 20000)
 const rateLimitStore = new Map()
 const freeVideoAllowance = Number.parseInt(process.env.FREE_VIDEO_ALLOWANCE || String(FREE_VIDEO_ALLOWANCE), 10)
-const entitlementService = isPersistentEntitlementConfigured() ? createPersistentEntitlementService({ freeVideoAllowance }) : createFreeTierEntitlementService({ freeVideoAllowance })
-const securityStore = isPersistentSecurityStateConfigured() ? createPersistentSecurityStore() : new Map()
 const runtimeConfig = createRuntimeConfigService()
+const getRuntimeFreeVideoAllowance = async () => { const config = await runtimeConfig.read(); const value = Number(config?.plans?.free?.videoEdits); return Number.isFinite(value) && value > 0 ? value : freeVideoAllowance }
+const entitlementService = isPersistentEntitlementConfigured() ? createPersistentEntitlementService({ freeVideoAllowance, getFreeVideoAllowance: getRuntimeFreeVideoAllowance }) : createFreeTierEntitlementService({ freeVideoAllowance })
+const securityStore = isPersistentSecurityStateConfigured() ? createPersistentSecurityStore() : new Map()
 if (!isPersistentSecurityStateConfigured() || !isPersistentEntitlementConfigured()) console.warn('Production persistence is not fully configured; set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before production.')
 const securityGate = createSecurityGate({ store: securityStore, sendSms: async ({ phoneNumber, message }) => { if (!process.env.INFOBIP_API_KEY) throw new Error('INFOBIP_API_KEY is not configured'); return createSmsProvider().sendSms({ phoneNumber, message }) } })
 const fromEnv = (name, fallback) => { const value = Number.parseInt(process.env[name] || String(fallback), 10); return Number.isFinite(value) ? value : fallback }
@@ -36,9 +37,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return sendJson(res, 204, {})
   const url = new URL(req.url, `http://${req.headers.host}`)
 
-  if (url.pathname === '/api/runtime-config' && req.method === 'GET') {
-    return sendJson(res, 200, { ok: true, config: await runtimeConfig.read() })
-  }
+  if (url.pathname === '/api/runtime-config' && req.method === 'GET') return sendJson(res, 200, { ok: true, config: await runtimeConfig.read() })
 
   if (url.pathname === '/api/runtime-config' && req.method === 'PATCH') {
     const auth = await authenticate(req)
