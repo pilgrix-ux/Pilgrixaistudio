@@ -39,24 +39,32 @@ function App(): JSX.Element {
       const welcome = document.querySelector('.message.ai .message-body p')
       if (welcome) welcome.textContent = config.aiLab.welcome
 
-      const starterButtons = document.querySelectorAll('.starter-row button')
+      const starterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.starter-row button'))
+      starterButtons.forEach((button) => button.setAttribute('hidden', ''))
       config.aiLab.starterPrompts.slice(0, starterButtons.length).forEach((item, index) => {
         const button = starterButtons[index]
+        button.removeAttribute('hidden')
         const strong = button.querySelector('strong')
         const small = button.querySelector('small')
         if (strong) strong.textContent = item.title
         if (small) small.textContent = item.detail
       })
 
-      const toolButtons = document.querySelectorAll('.tool-list button')
+      const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool-list button'))
+      toolButtons.forEach((button) => button.setAttribute('hidden', ''))
       config.aiLab.tools.filter((item) => item.enabled).slice(0, toolButtons.length).forEach((item, index) => {
         const button = toolButtons[index]
+        button.removeAttribute('hidden')
         const strong = button.querySelector('strong')
         const small = button.querySelector('small')
         if (strong) strong.textContent = item.title
         if (small) small.textContent = item.detail
-        button.toggleAttribute('hidden', !item.enabled)
       })
+
+      const workingTitle = document.querySelector('.working-row strong')
+      const workingSubtitle = document.querySelector('.working-row p')
+      if (workingTitle) workingTitle.textContent = config.aiLab.workingTitle
+      if (workingSubtitle) workingSubtitle.textContent = config.aiLab.workingSubtitle
     }
     void load()
     return () => { active = false }
