@@ -1,13 +1,14 @@
 import { createEditJobStore } from './edit-job-store.mjs'
+import { createPersistentEditJobStore, isPersistentEditJobStoreConfigured } from './persistent-edit-job-store.mjs'
 import { buildEditPlan, compareReferenceToSource, createAnalysis } from './edit-engine.mjs'
 
-const store = createEditJobStore()
+const store = isPersistentEditJobStoreConfigured() ? createPersistentEditJobStore() : createEditJobStore()
 const json = (res, status, body) => {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
   res.end(JSON.stringify(body))
 }
 
-export async function handleEditApi({ req, res, url, authenticate, authorizeEntitlement, consumeEntitlement, checkRateLimit, videoRateLimit, getPlanFromClaims, callProvider }) {
+export async function handleEditApi({ req, res, url, authenticate, authorizeEntitlement, consumeEntitlement, checkRateLimit, videoRateLimit, callProvider }) {
   if (!url.pathname.startsWith('/api/edit-jobs')) return false
   const auth = await authenticate(req)
   if (!auth.ok) { json(res, auth.status, { ok: false, error: auth.error }); return true }
@@ -23,7 +24,7 @@ export async function handleEditApi({ req, res, url, authenticate, authorizeEnti
     const entitlement = await authorizeEntitlement(auth)
     if (!entitlement.ok) { json(res, entitlement.status, { ok: false, error: entitlement.error }); return true }
     const job = await store.create({ userId: auth.userId, instruction: prompt, sourceMedia: Array.isArray(body.sourceMedia) ? body.sourceMedia : [], referenceMedia: Array.isArray(body.referenceMedia) ? body.referenceMedia : [] })
-    void processJob(job, { body, auth, callProvider, consumeEntitlement })
+    void processJob(job, { body, auth, callProvider, consumeEntitlement }).catch(() => {})
     json(res, 202, { ok: true, job: publicJob(job) })
     return true
   }
@@ -64,8 +65,8 @@ async function processJob(job, { body, auth, callProvider, consumeEntitlement })
 
     await store.transition(job.id, 'processing', 70)
     await store.transition(job.id, 'rendering', 90)
-    // Rendering is deliberately provider-agnostic. A production renderer will consume
-    // the validated plan and execute deterministic FFmpeg/model operations.
+    // The renderer is intentionally provider-agnostic. It will consume the validated
+    // plan and execute deterministic FFmpeg/model operations once a renderer worker is configured.
     const output = { status: 'render_pending', renderer: 'ffmpeg', planVersion: plan.version }
     const current = await store.get(job.id)
     await store.save({ ...current, state: 'completed', progress: 100, output })
