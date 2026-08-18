@@ -19,7 +19,8 @@ test('OTP is sent without returning the code', async () => {
   assert.match(delivered.message, /^Your verification code is: \d{6}$/)
 
   const code = delivered.message.match(/\d{6}$/)[0]
-  assert.equal(otp.verify({ subject: 'user-1', code }).verified, true)
+  const verification = await otp.verify({ subject: 'user-1', code })
+  assert.equal(verification.verified, true)
 })
 
 test('OTP cannot be guessed after the attempt limit', async () => {
@@ -31,9 +32,9 @@ test('OTP cannot be guessed after the attempt limit', async () => {
   })
 
   await otp.request({ subject: 'user-2', phoneNumber: '+2348000000000' })
-  assert.equal(otp.verify({ subject: 'user-2', code: '000000' }).status, 401)
-  assert.equal(otp.verify({ subject: 'user-2', code: '000000' }).status, 401)
-  assert.equal(otp.verify({ subject: 'user-2', code: '000000' }).status, 429)
+  assert.equal((await otp.verify({ subject: 'user-2', code: '000000' })).status, 401)
+  assert.equal((await otp.verify({ subject: 'user-2', code: '000000' })).status, 401)
+  assert.equal((await otp.verify({ subject: 'user-2', code: '000000' })).status, 429)
 })
 
 test('failed SMS delivery does not leave a usable OTP', async () => {
