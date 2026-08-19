@@ -20,9 +20,7 @@ export default function PilgrixAILab(): JSX.Element {
   const [working, setWorking] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => () => {
-    attachments.forEach((item) => URL.revokeObjectURL(item.url))
-  }, [attachments])
+  useEffect(() => () => { attachments.forEach((item) => URL.revokeObjectURL(item.url)) }, [attachments])
 
   const onFiles = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? [])
@@ -36,9 +34,12 @@ export default function PilgrixAILab(): JSX.Element {
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'user', text }])
     setPrompt('')
     setWorking(true)
-    const result = await editorService.createEditJob({ prompt: text, mediaIds: [] })
-    setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'ai', text: result.ok ? 'Your edit has been queued.' : (result.error ?? 'I could not start that edit.') }])
-    setWorking(false)
+    try {
+      const result = await editorService.createEditJob({ prompt: text, mediaIds: [] })
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'ai', text: result.ok ? 'Your edit has been queued.' : (result.error ?? 'I could not start that edit.') }])
+    } catch (error) {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'ai', text: error instanceof Error ? error.message : 'I could not start that edit.' }])
+    } finally { setWorking(false) }
   }
 
   return <div className="min-h-screen bg-[#f7f5f0] text-black">
