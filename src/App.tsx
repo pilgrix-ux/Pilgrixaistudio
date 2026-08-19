@@ -3,6 +3,7 @@ import { AiLabWorkspace } from '@/components/AiLabWorkspace'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
+// Deployment marker: keep the production build synchronized with the AI Lab workspace.
 function App(): JSX.Element {
   useEffect(() => {
     let active = true
