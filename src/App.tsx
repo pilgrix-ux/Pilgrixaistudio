@@ -1,9 +1,9 @@
 import { Studio } from '@/pages/Studio'
 import './App.css'
 
-function App(): JSX.Element {
+function App() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f7f8fa]">
       <Studio />
     </div>
   )
