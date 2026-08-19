@@ -19,7 +19,7 @@ function triggerSource(source: 'camera' | 'gallery' | 'files'): void {
   const input = document.createElement('input')
   input.type = 'file'
   input.multiple = source !== 'camera'
-  input.accept = source === 'files' ? 'video/*,image/*,audio/*,.pdf,.txt,.srt,.vtt' : 'video/*,image/*'
+  input.accept = 'video/*,image/*,audio/*'
   if (source === 'camera') input.setAttribute('capture', 'environment')
   input.addEventListener('change', () => {
     if (input.files?.length) dispatchFiles(input.files)
@@ -43,18 +43,18 @@ function buildSheet(): HTMLElement {
     <section class="attachment-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="attachment-sheet-title">
       <div class="attachment-sheet-handle"></div>
       <div class="attachment-sheet-header">
-        <div><span class="attachment-sheet-eyebrow">ADD TO THIS EDIT</span><h2 id="attachment-sheet-title">Bring in your media</h2><p>Choose footage, images, audio or a file. Everything stays attached to this edit.</p></div>
+        <div><span class="attachment-sheet-eyebrow">ADD TO THIS EDIT</span><h2 id="attachment-sheet-title">Bring in your media</h2><p>Choose footage, images or audio. Everything stays attached to this edit.</p></div>
         <button class="attachment-sheet-close" aria-label="Close attachment picker">×</button>
       </div>
       <div class="attachment-source-grid">
         <button class="attachment-source attachment-source-camera" data-source="camera"><span class="attachment-source-icon">${icon('camera')}</span><strong>Camera</strong><small>Record now</small></button>
         <button class="attachment-source" data-source="gallery"><span class="attachment-source-icon">${icon('gallery')}</span><strong>Gallery</strong><small>Photos & videos</small></button>
-        <button class="attachment-source" data-source="files"><span class="attachment-source-icon">${icon('files')}</span><strong>Files</strong><small>Audio & documents</small></button>
+        <button class="attachment-source" data-source="files"><span class="attachment-source-icon">${icon('files')}</span><strong>Files</strong><small>Audio, video & images</small></button>
       </div>
       <div class="attachment-recent-head"><div><span class="attachment-sheet-eyebrow">RECENT MEDIA</span><strong>Pick something you already have</strong></div><button class="attachment-recent-more" data-source="gallery">See all</button></div>
       <div class="attachment-recent-grid" aria-label="Recent media">
-        <button class="attachment-recent-empty" data-source="gallery"><span>+</span><strong>Add from gallery</strong><small>Your recent media will appear here</small></button>
-        <button class="attachment-recent-tip" data-source="files"><span>⌁</span><strong>Reference files</strong><small>Use a video, image, audio or subtitle file</small></button>
+        <button class="attachment-recent-empty" data-source="gallery"><span>+</span><strong>Add from gallery</strong><small>Your device's recent media opens here</small></button>
+        <button class="attachment-recent-tip" data-source="files"><span>⌁</span><strong>Reference media</strong><small>Bring in another clip, image or audio track</small></button>
       </div>
       <div class="attachment-sheet-footer"><span class="attachment-status-dot"></span><span>Media is attached to your current AI edit session.</span></div>
     </section>`
