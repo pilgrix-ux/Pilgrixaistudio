@@ -74,11 +74,11 @@ export function Studio(): JSX.Element {
     return saved && themes.some((item) => item.id === saved) ? saved : 'aurora'
   })
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [messages, setMessages] = useState<Message[]>([
+  const [_messages, setMessages] = useState<Message[]>([
     { id: 'welcome', role: 'ai', text: 'Bring the footage. Bring the idea. Pilgrix does the rest.', time: 'Now' },
   ])
   const [prompt, setPrompt] = useState('')
-  const [isWorking, setIsWorking] = useState(false)
+  const [_isWorking, setIsWorking] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -182,15 +182,6 @@ export function Studio(): JSX.Element {
     setPrompt('')
     setShowTools(false)
     showNotice('New edit ready.')
-  }
-
-  const renderPreview = (): void => {
-    if (!hasVideo || !primaryAttachment) {
-      showNotice('Add a video first.')
-      return
-    }
-    setPreviewUrl(primaryAttachment.url)
-    showNotice('Preview ready.')
   }
 
   return (
