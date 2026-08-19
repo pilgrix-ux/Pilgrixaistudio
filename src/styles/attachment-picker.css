@@ -1,0 +1,52 @@
+.attachment-sheet-open { overflow: hidden; }
+
+.attachment-sheet { position: fixed; inset: 0; z-index: 120; display: grid; align-items: end; opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+.attachment-sheet.is-open { opacity: 1; pointer-events: auto; }
+.attachment-sheet-backdrop { position: absolute; inset: 0; border: 0; background: rgba(9,13,19,.34); backdrop-filter: blur(9px); opacity: 0; transition: opacity .22s ease; }
+.attachment-sheet.is-open .attachment-sheet-backdrop { opacity: 1; }
+.attachment-sheet-panel { position: relative; width: min(100%, 620px); max-height: min(82vh, 720px); overflow: auto; margin: 0 auto; padding: 12px 20px 18px; border: 1px solid rgba(255,255,255,.72); border-bottom: 0; border-radius: 30px 30px 0 0; background: rgba(250,249,246,.97); box-shadow: 0 -28px 90px rgba(10,16,24,.2); transform: translateY(24px); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.attachment-sheet.is-open .attachment-sheet-panel { transform: translateY(0); }
+.attachment-sheet-handle { width: 42px; height: 5px; border-radius: 99px; margin: 0 auto 18px; background: #d6d9dd; }
+.attachment-sheet-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.attachment-sheet-eyebrow { display: block; color: #7e8792; font-size: 9px; line-height: 1; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+.attachment-sheet-header h2 { margin: 7px 0 5px; color: #111720; font-size: 23px; letter-spacing: -.035em; line-height: 1.05; }
+.attachment-sheet-header p { max-width: 440px; margin: 0; color: #777f89; font-size: 11px; line-height: 1.5; }
+.attachment-sheet-close { width: 38px; height: 38px; flex: 0 0 auto; border: 1px solid rgba(22,28,38,.09); border-radius: 50%; background: #fff; color: #4f5864; font-size: 25px; line-height: 1; display: grid; place-items: center; }
+.attachment-source-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0 24px; }
+.attachment-source { min-height: 116px; border: 1px solid rgba(22,28,38,.08); border-radius: 20px; background: rgba(255,255,255,.8); color: #222a34; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 15px; text-align: left; box-shadow: 0 10px 30px rgba(35,43,54,.045); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.attachment-source:hover { transform: translateY(-2px); border-color: rgba(47,128,237,.28); box-shadow: 0 16px 35px rgba(35,43,54,.08); }
+.attachment-source-camera { background: linear-gradient(145deg,#161d28,#273444); color: white; border-color: #161d28; }
+.attachment-source-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px; background: #edf5ff; color: #2f80ed; }
+.attachment-source-camera .attachment-source-icon { background: rgba(255,255,255,.12); color: #fff; }
+.attachment-source-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.attachment-source strong { font-size: 13px; letter-spacing: -.01em; }
+.attachment-source small { margin-top: 3px; color: #9299a2; font-size: 9px; }
+.attachment-source-camera small { color: #aeb9c7; }
+.attachment-recent-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.attachment-recent-head strong { display: block; margin-top: 6px; color: #252c35; font-size: 12px; }
+.attachment-recent-more { border: 0; background: transparent; color: #2f80ed; font-size: 10px; font-weight: 750; }
+.attachment-recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.attachment-recent-empty,.attachment-recent-tip { min-height: 132px; border: 1px solid rgba(22,28,38,.08); border-radius: 18px; background: #f1f3f5; color: #414a56; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 15px; text-align: left; overflow: hidden; position: relative; }
+.attachment-recent-empty:before,.attachment-recent-tip:before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%, rgba(86,204,242,.24), transparent 45%), linear-gradient(135deg, rgba(47,128,237,.1), transparent 65%); }
+.attachment-recent-empty > *,.attachment-recent-tip > * { position: relative; z-index: 1; }
+.attachment-recent-empty span,.attachment-recent-tip span { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; margin-bottom: auto; background: rgba(255,255,255,.72); color: #2f80ed; font-size: 22px; }
+.attachment-recent-tip span { color: #161d28; }
+.attachment-recent-empty strong,.attachment-recent-tip strong { font-size: 11px; }
+.attachment-recent-empty small,.attachment-recent-tip small { margin-top: 3px; color: #7f8791; font-size: 9px; line-height: 1.35; }
+.attachment-sheet-footer { display: flex; align-items: center; gap: 7px; margin-top: 14px; padding: 0 2px; color: #969ca4; font-size: 9px; }
+.attachment-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f80ed; box-shadow: 0 0 0 4px rgba(47,128,237,.1); }
+
+@media (min-width: 681px) {
+  .attachment-sheet { align-items: center; padding: 24px; }
+  .attachment-sheet-panel { border-bottom: 1px solid rgba(255,255,255,.72); border-radius: 30px; max-height: min(760px, 88vh); }
+}
+
+@media (max-width: 520px) {
+  .attachment-sheet-panel { padding: 10px 14px 15px; border-radius: 26px 26px 0 0; }
+  .attachment-sheet-header h2 { font-size: 21px; }
+  .attachment-source-grid { gap: 8px; }
+  .attachment-source { min-height: 105px; padding: 12px; border-radius: 17px; }
+  .attachment-source-icon { width: 38px; height: 38px; border-radius: 12px; margin-bottom: 10px; }
+  .attachment-source strong { font-size: 12px; }
+  .attachment-recent-grid { grid-template-columns: 1fr 1fr; }
+}
