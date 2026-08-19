@@ -1,1 +1,33 @@
-/* App container styles */
+/* Runtime theme overrides. Values are supplied by /api/runtime-config at runtime. */
+:root {
+  --pilgrix-background: #f5f0e8;
+  --pilgrix-surface: #fffdf8;
+  --pilgrix-ink: #121212;
+  --pilgrix-muted: #6b7280;
+  --pilgrix-blue: #2f80ed;
+  --pilgrix-cyan: #56ccf2;
+  --pilgrix-accent: #00e5ff;
+}
+
+body,
+.pilgrix-shell { background: var(--pilgrix-background); color: var(--pilgrix-ink); }
+.topbar { background: color-mix(in srgb, var(--pilgrix-background) 88%, transparent); }
+.brand-mark,
+.message-avatar.ai { background: linear-gradient(145deg, var(--pilgrix-blue), var(--pilgrix-cyan)); }
+.send-button { background: var(--pilgrix-blue); }
+.live-dot,
+.thinking-orb,
+.blue-pulse { background: var(--pilgrix-blue); }
+.composer { border-color: color-mix(in srgb, var(--pilgrix-blue) 42%, transparent); }
+.ambient-glow-one { background: var(--pilgrix-blue); }
+.ambient-glow-two { background: var(--pilgrix-cyan); }
+.now-card { background: var(--pilgrix-ink); border-color: var(--pilgrix-ink); }
+.icon-button,
+.profile-chip,
+.soft-button,
+.rail-card,
+.starter-row button { background-color: color-mix(in srgb, var(--pilgrix-surface) 72%, transparent); }
+
+/* Keep runtime feature flags capable of removing destinations without a rebuild. */
+.bottom-nav button[hidden],
+.tool-list button[hidden] { display: none !important; }
