@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowUp, Bell, ChevronRight, Eraser, Film, Folder, Menu, Mic, Paperclip, Scissors, Search, Settings, Sparkles, User, Wand2, X } from 'lucide-react'
+import { ArrowUp, Bell, Eraser, Folder, Menu, Paperclip, Scissors, Search, Sparkles, User, Wand2 } from 'lucide-react'
 import { editorService } from '@/services/editorService'
 
 type Attachment = { id: string; file: File; url: string }
