@@ -1,7 +1,7 @@
 /** Pilgrix AI Lab — refined conversation-driven video creation workspace. */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUp, ChevronRight, FileVideo, FolderOpen, Grid2X2, Menu, Mic, Plus, Search, Settings, Sparkles, User, X } from 'lucide-react'
+import { ArrowUp, ChevronRight, FileVideo, FolderOpen, Menu, Mic, Plus, Search, Settings, Sparkles, User, X } from 'lucide-react'
 import { editorService } from '@/services/editorService'
 
 type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string }
