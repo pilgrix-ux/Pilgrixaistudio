@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { PilgrixAILab } from '@/pages/PilgrixAILab'
+import { AiLabWorkspace } from '@/components/AiLabWorkspace'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
@@ -14,7 +14,7 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
-  return <PilgrixAILab />
+  return <AiLabWorkspace />
 }
 
 export default App
