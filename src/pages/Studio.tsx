@@ -103,7 +103,6 @@ export function Studio(): JSX.Element {
     return () => { document.body.style.overflow = previousOverflow }
   }, [showAttachmentSheet])
 
-  const primaryAttachment = attachments[0]
   const hasVideo = attachments.some((item) => item.file.type.startsWith('video/'))
 
   const showNotice = (text: string): void => {
