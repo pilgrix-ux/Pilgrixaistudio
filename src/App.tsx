@@ -1,20 +1,20 @@
 import { useEffect } from 'react'
-import { Studio } from '@/pages/Studio'
+import { PilgrixAILab } from '@/pages/PilgrixAILab'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
 function App(): JSX.Element {
   useEffect(() => {
     let active = true
-    void fetchRuntimeConfig().then((config) => {
-      if (!active || !config) return
-      applyRuntimeTheme(config)
-      document.documentElement.dataset.runtimeConfigVersion = String(config.version)
+    void fetchRuntimeConfig().then((runtimeConfig) => {
+      if (!active || !runtimeConfig) return
+      applyRuntimeTheme(runtimeConfig)
+      document.documentElement.dataset.runtimeConfigVersion = String(runtimeConfig.version)
     })
     return () => { active = false }
   }, [])
 
-  return <Studio />
+  return <PilgrixAILab />
 }
 
 export default App
