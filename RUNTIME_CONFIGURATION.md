@@ -48,3 +48,7 @@ The frontend fetches runtime configuration on load. The server also reads the ru
 ## Important boundary
 
 Runtime configuration is for **product behavior and presentation**, not secrets or arbitrary code. Provider keys, authentication secrets, signing keys, database credentials and other sensitive values remain environment/server secrets.
+
+## Deployment verification
+
+Production deployments should be verified from the latest `main` commit before being treated as live. Failed historical deployments are retained for diagnosis and rollback rather than deleted.
