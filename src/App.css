@@ -154,3 +154,46 @@ body {
     min-height: 78px;
   }
 }
+
+/* HARD MOBILE APP VIEWPORT LOCK. */
+html:has(.ai-lab-view),
+body:has(.ai-lab-view),
+#root:has(.ai-lab-view) {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body:has(.ai-lab-view) {
+  position: fixed !important;
+  inset: 0 !important;
+  touch-action: none !important;
+}
+
+#root:has(.ai-lab-view) {
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+.ai-lab-view {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+.ai-lab-view input,
+.ai-lab-view textarea {
+  touch-action: auto;
+}
