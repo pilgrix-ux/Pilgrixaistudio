@@ -1,6 +1,6 @@
 {
   "name": "pilgrixaistudio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-powered media editor and studio application — production deployment verified",
   "type": "module",
   "scripts": {
