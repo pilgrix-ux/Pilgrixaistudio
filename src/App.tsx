@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ReferenceAiLab } from '@/components/ReferenceAiLab'
+import { CodePenAiLab } from '@/components/CodePenAiLab'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
@@ -14,7 +14,7 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
-  return <ReferenceAiLab />
+  return <CodePenAiLab />
 }
 
 export default App
