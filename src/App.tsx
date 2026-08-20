@@ -14,7 +14,7 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
-  // Keep the app entrypoint current so the connected Vercel project picks up the latest UI commit.
+  // Workspace menu and Images destination live in CodePenAiLab; keep this entrypoint explicit for Vercel builds.
   return <CodePenAiLab />
 }
 
