@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUp, Menu, Mic, Plus, Sparkles, User } from 'lucide-react'
+import { ArrowUp, ChevronRight, Folder, Menu, Mic, Plus, Search, Settings, Sparkles, User, X } from 'lucide-react'
 
 export function CodePenAiLab(): JSX.Element {
   const [prompt, setPrompt] = useState('')
@@ -64,30 +64,55 @@ export function CodePenAiLab(): JSX.Element {
       </footer>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm" onClick={() => setMenuOpen(false)}>
-          <aside className="relative flex h-[100dvh] w-[88vw] max-w-md flex-col justify-between border-r border-slate-200/80 bg-white/90 p-6 shadow-2xl backdrop-blur-2xl" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <div className="mb-8 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-950/20 backdrop-blur-[3px]" onClick={() => setMenuOpen(false)}>
+          <aside className="relative flex h-[100dvh] w-[84vw] max-w-[390px] flex-col border-r border-white/70 bg-gradient-to-b from-white via-sky-50/95 to-indigo-50/90 shadow-[18px_0_55px_rgba(51,65,85,0.14)] backdrop-blur-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
+              <div className="flex items-start justify-between">
                 <div>
-                  <span className="block bg-gradient-to-r from-sky-500 to-indigo-600 bg-clip-text text-[10px] font-extrabold uppercase tracking-widest text-transparent">PILGRIX</span>
-                  <h2 className="text-xl font-bold text-slate-900">Workspace</h2>
+                  <span className="block bg-gradient-to-r from-sky-500 to-indigo-600 bg-clip-text text-[10px] font-extrabold uppercase tracking-[0.22em] text-transparent">PILGRIX</span>
+                  <h2 className="mt-0.5 text-[22px] font-bold tracking-tight text-slate-900">Workspace</h2>
                 </div>
-                <button type="button" onClick={() => setMenuOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-slate-200/80 hover:text-slate-800"><span className="text-2xl leading-none">×</span></button>
+                <button type="button" onClick={() => setMenuOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/65 text-slate-500 shadow-sm backdrop-blur-md transition hover:bg-white hover:text-slate-800 active:scale-95" aria-label="Close workspace">
+                  <X size={20} />
+                </button>
               </div>
-              <nav className="space-y-3">
-                <button type="button" onClick={newCreation} className="group flex w-full items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-lg">
-                  <div className="flex items-center gap-3.5"><div className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600"><Plus size={20} /></div><span className="text-sm font-semibold text-slate-700">New creation</span></div><span className="text-xl text-slate-300">›</span>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden px-4">
+              <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Create</div>
+              <button type="button" onClick={newCreation} className="group mb-5 flex w-full items-center justify-between rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 p-3.5 text-left text-white shadow-lg shadow-sky-500/15 transition-all hover:shadow-xl hover:shadow-indigo-500/20 active:scale-[0.99]">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/18 ring-1 ring-white/25"><Plus size={21} /></div>
+                  <div><div className="text-sm font-bold">New creation</div><div className="mt-0.5 text-[10px] font-medium text-white/75">Start a new AI edit</div></div>
+                </div>
+                <ChevronRight size={18} className="text-white/75 transition-transform group-hover:translate-x-0.5" />
+              </button>
+
+              <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Library</div>
+              <nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/55 shadow-sm shadow-slate-300/10 backdrop-blur-md">
+                <button type="button" className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left transition hover:bg-white/75 active:bg-white/90">
+                  <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100/80 text-sky-600"><Folder size={18} /></span><span className="text-sm font-semibold text-slate-700">Projects</span></div>
+                  <ChevronRight size={17} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-500" />
                 </button>
-                <button type="button" className="group flex w-full items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-lg">
-                  <div className="flex items-center gap-3.5"><div className="rounded-xl bg-sky-50 p-2.5 text-sky-600">▢</div><span className="text-sm font-semibold text-slate-700">Projects</span></div><span className="text-xl text-slate-300">›</span>
-                </button>
-                <button type="button" className="group flex w-full items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-lg">
-                  <div className="flex items-center gap-3.5"><div className="rounded-xl bg-slate-100 p-2.5 text-slate-600">⌕</div><span className="text-sm font-semibold text-slate-700">Search creations</span></div><span className="text-xl text-slate-300">›</span>
-                </button>
-                <button type="button" className="group flex w-full items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-lg">
-                  <div className="flex items-center gap-3.5"><div className="rounded-xl bg-slate-100 p-2.5 text-slate-600">⚙</div><span className="text-sm font-semibold text-slate-700">Settings</span></div><span className="text-xl text-slate-300">›</span>
+                <div className="mx-3.5 border-t border-slate-200/55" />
+                <button type="button" className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left transition hover:bg-white/75 active:bg-white/90">
+                  <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50/90 text-indigo-500"><Search size={18} /></span><span className="text-sm font-semibold text-slate-700">Search creations</span></div>
+                  <ChevronRight size={17} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-500" />
                 </button>
               </nav>
+
+              <div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Account</div>
+              <nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/55 shadow-sm shadow-slate-300/10 backdrop-blur-md">
+                <button type="button" className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left transition hover:bg-white/75 active:bg-white/90">
+                  <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-500"><Settings size={18} /></span><span className="text-sm font-semibold text-slate-700">Settings</span></div>
+                  <ChevronRight size={17} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500" />
+                </button>
+              </nav>
+            </div>
+
+            <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4">
+              <div className="h-px bg-gradient-to-r from-transparent via-slate-200/70 to-transparent" />
+              <p className="pt-3 text-center text-[10px] font-medium text-slate-400">Your workspace</p>
             </div>
           </aside>
         </div>
