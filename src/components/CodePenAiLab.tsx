@@ -41,7 +41,6 @@ export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImage
   const [prompt, setPrompt] = useState('')
   const [sent, setSent] = useState(false)
   const [working, setWorking] = useState(false)
-  // The initial value is derived synchronously so returning from another page never paints the AI Lab before its menu.
   const [menuOpen, setMenuOpen] = useState(() => menuReturnSignal > 0)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
@@ -91,10 +90,10 @@ export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImage
     closeMenu()
   }
 
-  // Do not defer navigation. The old setTimeout caused React to paint the AI Lab once
-  // after the drawer closed, producing the visible main-page flash.
+  // Navigation must happen before changing the drawer state. The destination
+  // page replaces this component immediately, so there is never a painted
+  // frame of the AI Lab between the drawer and the destination.
   const openPage = (callback?: (fromMenu?: boolean) => void, fromMenu = false) => {
-    closeMenu()
     callback?.(fromMenu)
   }
 
