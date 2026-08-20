@@ -45,6 +45,7 @@ export interface Project {
   name: string
   description: string
   status: ProjectStatus
+  mediaType?: 'image' | 'video'
   createdAt: string
   updatedAt: string
   thumbnailUrl?: string
@@ -55,12 +56,14 @@ export interface CreateProjectRequest {
   name: string
   description?: string
   status?: ProjectStatus
+  mediaType?: 'image' | 'video'
 }
 
 export interface UpdateProjectRequest {
   name?: string
   description?: string
   status?: ProjectStatus
+  mediaType?: 'image' | 'video'
 }
 
 export interface MediaAsset {
