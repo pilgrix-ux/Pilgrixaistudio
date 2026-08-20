@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   ArrowUp,
   Camera,
@@ -41,7 +41,8 @@ export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImage
   const [prompt, setPrompt] = useState('')
   const [sent, setSent] = useState(false)
   const [working, setWorking] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // The initial value is derived synchronously so returning from another page never paints the AI Lab before its menu.
+  const [menuOpen, setMenuOpen] = useState(() => menuReturnSignal > 0)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [pickerScrolled, setPickerScrolled] = useState(false)
@@ -49,10 +50,6 @@ export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImage
   const galleryRef = useRef<HTMLInputElement>(null)
   const filesRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
-
-  useLayoutEffect(() => {
-    if (menuReturnSignal > 0) setMenuOpen(true)
-  }, [menuReturnSignal])
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
@@ -94,9 +91,11 @@ export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImage
     closeMenu()
   }
 
+  // Do not defer navigation. The old setTimeout caused React to paint the AI Lab once
+  // after the drawer closed, producing the visible main-page flash.
   const openPage = (callback?: (fromMenu?: boolean) => void, fromMenu = false) => {
     closeMenu()
-    window.setTimeout(() => callback?.(fromMenu), 0)
+    callback?.(fromMenu)
   }
 
   const mediaLabel = attachments.length === 1 ? '1 item attached' : `${attachments.length} items attached`
