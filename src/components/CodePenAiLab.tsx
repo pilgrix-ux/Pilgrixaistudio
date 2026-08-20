@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowUp,
   Camera,
@@ -17,10 +17,11 @@ import {
 } from 'lucide-react'
 
 type CodePenAiLabProps = {
-  onOpenProjects?: () => void
-  onOpenImages?: () => void
-  onOpenSearch?: () => void
-  onOpenSettings?: () => void
+  menuReturnSignal?: number
+  onOpenProjects?: (fromMenu?: boolean) => void
+  onOpenImages?: (fromMenu?: boolean) => void
+  onOpenSearch?: (fromMenu?: boolean) => void
+  onOpenSettings?: (fromMenu?: boolean) => void
 }
 
 type Attachment = {
@@ -36,7 +37,7 @@ function fileKind(file: File): Attachment['kind'] {
   return 'other'
 }
 
-export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpenSettings }: CodePenAiLabProps): JSX.Element {
+export function CodePenAiLab({ menuReturnSignal = 0, onOpenProjects, onOpenImages, onOpenSearch, onOpenSettings }: CodePenAiLabProps): JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [sent, setSent] = useState(false)
   const [working, setWorking] = useState(false)
@@ -48,6 +49,10 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
   const galleryRef = useRef<HTMLInputElement>(null)
   const filesRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (menuReturnSignal > 0) setMenuOpen(true)
+  }, [menuReturnSignal])
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
@@ -89,9 +94,9 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
     closeMenu()
   }
 
-  const openPage = (callback?: () => void) => {
+  const openPage = (callback?: (fromMenu?: boolean) => void, fromMenu = false) => {
     closeMenu()
-    window.setTimeout(() => callback?.(), 0)
+    window.setTimeout(() => callback?.(fromMenu), 0)
   }
 
   const mediaLabel = attachments.length === 1 ? '1 item attached' : `${attachments.length} items attached`
@@ -213,7 +218,7 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
           <button type="button" aria-label="Close workspace menu" className="absolute inset-0 cursor-default bg-slate-950/20 backdrop-blur-[3px]" onClick={closeMenu} />
           <aside className="relative z-[101] flex h-[100dvh] w-[84vw] max-w-[390px] flex-col border-r border-white/70 bg-gradient-to-b from-white via-sky-50/95 to-indigo-50/90 shadow-[18px_0_55px_rgba(51,65,85,0.14)] backdrop-blur-2xl">
             <div className="px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]"><div className="flex items-start justify-between"><div><span className="block bg-gradient-to-r from-sky-500 to-indigo-600 bg-clip-text text-[10px] font-extrabold uppercase tracking-[0.22em] text-transparent">PILGRIX</span><h2 className="mt-0.5 text-[22px] font-bold tracking-tight text-slate-900">Workspace</h2><p className="mt-1 text-[11px] font-medium text-slate-400">Everything for your creations</p></div><button type="button" onClick={closeMenu} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/75 text-slate-500 shadow-sm" aria-label="Close workspace"><X size={20} /></button></div></div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5"><div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Create</div><button type="button" onClick={newCreation} className="group mb-5 flex w-full items-center justify-between rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 p-3.5 text-left text-white shadow-lg shadow-sky-500/15 active:scale-[0.99]"><div className="flex items-center gap-3.5"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/25"><Plus size={21} /></div><div><div className="text-sm font-bold">New creation</div><div className="mt-0.5 text-[10px] font-medium text-white/75">Start a new AI edit</div></div></div><ChevronRight size={18} className="text-white/75" /></button><div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Library</div><nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/65 shadow-sm backdrop-blur-md"><button type="button" onClick={() => openPage(onOpenProjects)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-600"><Folder size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Projects</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-sky-500" /></button><div className="mx-3.5 border-t border-slate-200/60" /><button type="button" onClick={() => openPage(onOpenImages)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 text-indigo-500"><Image size={18} strokeWidth={1.9} /></span><div><span className="block text-sm font-semibold text-slate-700">Images</span><span className="mt-0.5 block text-[10px] font-medium text-slate-400">Your real images</span></div></div><ChevronRight size={17} className="text-slate-300 group-hover:text-indigo-500" /></button><div className="mx-3.5 border-t border-slate-200/60" /><button type="button" onClick={() => openPage(onOpenSearch)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"><Search size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Search creations</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-indigo-500" /></button></nav><div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Account</div><nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/65 shadow-sm backdrop-blur-md"><button type="button" onClick={() => openPage(onOpenSettings)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><Settings size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Settings</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-slate-600" /></button></nav></div><div className="shrink-0 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4"><div className="h-px bg-gradient-to-r from-transparent via-slate-200/70 to-transparent" /><p className="pt-3 text-center text-[10px] font-medium text-slate-400">Your workspace</p></div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5"><div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Create</div><button type="button" onClick={newCreation} className="group mb-5 flex w-full items-center justify-between rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 p-3.5 text-left text-white shadow-lg shadow-sky-500/15 active:scale-[0.99]"><div className="flex items-center gap-3.5"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/25"><Plus size={21} /></div><div><div className="text-sm font-bold">New creation</div><div className="mt-0.5 text-[10px] font-medium text-white/75">Start a new AI edit</div></div></div><ChevronRight size={18} className="text-white/75" /></button><div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Library</div><nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/65 shadow-sm backdrop-blur-md"><button type="button" onClick={() => openPage(onOpenProjects, true)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-600"><Folder size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Projects</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-sky-500" /></button><div className="mx-3.5 border-t border-slate-200/60" /><button type="button" onClick={() => openPage(onOpenImages, true)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 text-indigo-500"><Image size={18} strokeWidth={1.9} /></span><div><span className="block text-sm font-semibold text-slate-700">Images</span><span className="mt-0.5 block text-[10px] font-medium text-slate-400">Your real images</span></div></div><ChevronRight size={17} className="text-slate-300 group-hover:text-indigo-500" /></button><div className="mx-3.5 border-t border-slate-200/60" /><button type="button" onClick={() => openPage(onOpenSearch, true)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"><Search size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Search creations</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-indigo-500" /></button></nav><div className="mb-2 mt-6 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Account</div><nav className="overflow-hidden rounded-2xl border border-white/80 bg-white/65 shadow-sm backdrop-blur-md"><button type="button" onClick={() => openPage(onOpenSettings, true)} className="group flex w-full items-center justify-between px-3.5 py-3.5 text-left hover:bg-white/85 active:bg-white"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><Settings size={18} strokeWidth={1.9} /></span><span className="text-sm font-semibold text-slate-700">Settings</span></div><ChevronRight size={17} className="text-slate-300 group-hover:text-slate-600" /></button></nav></div><div className="shrink-0 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4"><div className="h-px bg-gradient-to-r from-transparent via-slate-200/70 to-transparent" /><p className="pt-3 text-center text-[10px] font-medium text-slate-400">Your workspace</p></div>
           </aside>
         </div>
       )}
