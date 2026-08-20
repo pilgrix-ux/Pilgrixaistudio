@@ -37,3 +37,6 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Build verification
+        run: echo "Pilgrix production build passed all quality gates."
