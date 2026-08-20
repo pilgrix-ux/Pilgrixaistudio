@@ -43,18 +43,25 @@ function App(): JSX.Element {
   }, [])
 
   const navigate = (nextPage: Page, returnToMenu = false): void => {
-    if (nextPage === 'ai' && returnToMenu) {
-      // Increment before changing the route so the AI Lab receives a fresh command
-      // even when the browser hash transition and React render happen together.
-      setMenuReturnSignal((value) => value + 1)
-    }
+    if (nextPage === 'ai') {
+      // Returning from a Workspace page must always reopen the Workspace drawer.
+      // Do this at the App level so the command survives the page component unmount.
+      if (returnToMenu) setMenuReturnSignal((value) => value + 1)
 
-    const nextHash = nextPage === 'ai' ? '' : `#${nextPage}`
-    if (window.location.hash === nextHash) {
-      setPage(nextPage)
+      // Do not use location.hash = '' here. On mobile browsers that can create
+      // an extra history transition and make the back button appear to do nothing.
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
+      setPage('ai')
       return
     }
-    window.location.hash = nextHash
+
+    const nextHash = `#${nextPage}`
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`)
+    }
+    setPage(nextPage)
   }
 
   if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai', true)} />
