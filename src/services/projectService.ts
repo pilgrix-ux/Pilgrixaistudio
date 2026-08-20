@@ -23,10 +23,10 @@ const projects: Map<string, Project> = new Map()
 const trash: Map<string, DeletedProject> = new Map()
 let localStoreLoaded = false
 
-const buildProject = (name: string, description = '', status: Project['status'] = 'draft'): Project => {
+const buildProject = (name: string, description = '', status: Project['status'] = 'draft', mediaType?: Project['mediaType']): Project => {
   const now = new Date().toISOString()
   const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  return { id, name, description, status, createdAt: now, updatedAt: now, assetIds: [] }
+  return { id, name, description, status, mediaType, createdAt: now, updatedAt: now, assetIds: [] }
 }
 
 function loadLocalStore(): void {
@@ -84,7 +84,7 @@ export const projectService = {
   async createProject(request: CreateProjectRequest): Promise<ApiResponse<Project>> {
     if (config.api.mode !== 'local-dev') return apiClient.request<Project>('/api/projects', { method: 'POST', body: request })
     loadLocalStore()
-    const project = buildProject(request.name, request.description ?? '', request.status ?? 'draft')
+    const project = buildProject(request.name, request.description ?? '', request.status ?? 'draft', request.mediaType)
     projects.set(project.id, project)
     persistLocalStore()
     return localResponse(project, `local-project-${project.id}`)
@@ -129,7 +129,7 @@ export const projectService = {
     loadLocalStore()
     const source = projects.get(id)
     if (!source) return notFound<Project | null>(`local-project-duplicate-${id}`, 'The project could not be found to duplicate.')
-    const duplicate = buildProject(`${source.name} Copy`, source.description, source.status)
+    const duplicate = buildProject(`${source.name} Copy`, source.description, source.status, source.mediaType)
     duplicate.assetIds = [...source.assetIds]
     duplicate.thumbnailUrl = source.thumbnailUrl
     projects.set(duplicate.id, duplicate)
