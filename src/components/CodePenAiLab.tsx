@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   ArrowUp,
   Camera,
@@ -43,14 +43,11 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
   const [menuOpen, setMenuOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [pickerScrolled, setPickerScrolled] = useState(false)
 
   const galleryRef = useRef<HTMLInputElement>(null)
   const filesRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    return () => attachments.forEach((item) => URL.revokeObjectURL(item.url))
-  }, [attachments])
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
@@ -60,7 +57,6 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
       url: URL.createObjectURL(file),
       kind: fileKind(file),
     }))
-
     setAttachments((current) => [...current, ...incoming])
     setPickerOpen(true)
   }
@@ -141,7 +137,8 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
         <div className="mx-auto max-w-xl rounded-[28px] border border-white/95 bg-white/90 p-3 shadow-[0_14px_45px_rgba(30,64,175,0.12)] backdrop-blur-2xl">
           {attachments.length > 0 && (
             <div className="relative mb-2 overflow-hidden rounded-2xl bg-slate-50/80 p-2">
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-slate-50 to-transparent opacity-0 transition-opacity" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-slate-50 via-slate-50/70 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-slate-50 via-slate-50/70 to-transparent" />
               <div className="flex gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {attachments.map((item) => (
                   <div key={item.id} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white bg-slate-200 shadow-sm">
@@ -183,21 +180,28 @@ export function CodePenAiLab({ onOpenProjects, onOpenImages, onOpenSearch, onOpe
               <button type="button" onClick={() => filesRef.current?.click()} className="flex min-h-[92px] flex-col items-center justify-center gap-2 text-slate-700 transition active:bg-indigo-50"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><File size={21} /></span><span className="text-xs font-bold">Files</span></button>
             </div>
 
-            {attachments.length > 0 ? (
-              <div className="mt-4 max-h-[34vh] overflow-y-auto rounded-2xl border border-white bg-white/70 p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="mb-2 flex items-center justify-between"><span className="text-xs font-bold text-slate-700">Selected media</span><span className="text-[10px] font-semibold text-slate-400">{mediaLabel}</span></div>
-                <div className="grid grid-cols-3 gap-2">
-                  {attachments.map((item) => (
-                    <div key={item.id} className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
-                      {item.kind === 'image' ? <img src={item.url} alt={item.file.name} className="h-full w-full object-cover" /> : item.kind === 'video' ? <video src={item.url} muted playsInline className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center"><File size={25} /></div>}
-                      <button type="button" onClick={() => removeAttachment(item.id)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/65 text-white" aria-label={`Remove ${item.file.name}`}><X size={13} /></button>
+            <div className="relative mt-4 max-h-[38vh] overflow-hidden rounded-2xl border border-white bg-white/70">
+              <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-white via-white/80 to-transparent transition-opacity duration-300 ${pickerScrolled ? 'opacity-100' : 'opacity-0'}`} />
+              <div onScroll={(e) => setPickerScrolled(e.currentTarget.scrollTop > 4)} className="max-h-[38vh] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {attachments.length > 0 ? (
+                  <>
+                    <div className="mb-2 flex items-center justify-between"><span className="text-xs font-bold text-slate-700">Selected media</span><span className="text-[10px] font-semibold text-slate-400">{mediaLabel}</span></div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {attachments.map((item) => (
+                        <div key={item.id} className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
+                          {item.kind === 'image' ? <img src={item.url} alt={item.file.name} className="h-full w-full object-cover" /> : item.kind === 'video' ? <video src={item.url} muted playsInline className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center"><File size={25} /></div>}
+                          <button type="button" onClick={() => removeAttachment(item.id)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/65 text-white" aria-label={`Remove ${item.file.name}`}><X size={13} /></button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    <div className="h-12" />
+                  </>
+                ) : (
+                  <div className="min-h-[145px] px-5 py-7 text-center"><p className="text-xs font-semibold text-slate-500">Nothing selected yet</p><p className="mt-1 text-[10px] font-medium text-slate-400">Choose Camera, Gallery, or Files above.</p></div>
+                )}
               </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white/45 px-5 py-7 text-center"><p className="text-xs font-semibold text-slate-500">Nothing selected yet</p><p className="mt-1 text-[10px] font-medium text-slate-400">Choose Camera, Gallery, or Files above.</p></div>
-            )}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-9 bg-gradient-to-t from-white/85 to-transparent" />
+            </div>
 
             <button type="button" disabled={attachments.length === 0} onClick={() => setPickerOpen(false)} className="mt-4 w-full rounded-2xl bg-slate-950 py-3.5 text-sm font-bold text-white shadow-lg disabled:bg-slate-200 disabled:text-slate-400">Done</button>
           </section>
