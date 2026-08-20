@@ -47,10 +47,6 @@ function App(): JSX.Element {
   const navigate = (nextPage: Page, returnToMenu = false): void => {
     if (nextPage === 'ai') {
       if (returnToMenu) setMenuReturnSignal((value) => value + 1)
-
-      // Return to the base route without creating another browser-history entry.
-      // This prevents the mobile browser Back action from getting trapped between
-      // the workspace page and the AI Lab home screen.
       if (window.location.hash) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }
@@ -82,3 +78,5 @@ function App(): JSX.Element {
 }
 
 export default App
+
+// Navigation is intentionally kept at the app shell so menu/page transitions survive remounts.
