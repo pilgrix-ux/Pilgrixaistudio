@@ -1,9 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { CodePenAiLab } from '@/components/CodePenAiLab'
+import { ProjectsPage } from '@/pages/ProjectsPage'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
 function App(): JSX.Element {
+  const [page, setPage] = useState<'ai' | 'projects'>('ai')
+
   useEffect(() => {
     let active = true
     void fetchRuntimeConfig().then((runtimeConfig) => {
@@ -14,8 +17,9 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
-  // Workspace menu and Images destination live in CodePenAiLab; keep this entrypoint explicit for Vercel builds.
-  return <CodePenAiLab />
+  return page === 'projects'
+    ? <ProjectsPage onBack={() => setPage('ai')} />
+    : <CodePenAiLab onOpenProjects={() => setPage('projects')} />
 }
 
 export default App
