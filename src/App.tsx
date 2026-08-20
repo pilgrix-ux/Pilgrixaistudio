@@ -44,6 +44,8 @@ function App(): JSX.Element {
 
   const navigate = (nextPage: Page, returnToMenu = false): void => {
     if (nextPage === 'ai' && returnToMenu) {
+      // Increment before changing the route so the AI Lab receives a fresh command
+      // even when the browser hash transition and React render happen together.
       setMenuReturnSignal((value) => value + 1)
     }
 
@@ -63,10 +65,10 @@ function App(): JSX.Element {
   return (
     <CodePenAiLab
       menuReturnSignal={menuReturnSignal}
-      onOpenProjects={() => navigate('projects')}
-      onOpenImages={() => navigate('images')}
-      onOpenSearch={() => navigate('search')}
-      onOpenSettings={() => navigate('settings')}
+      onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)}
+      onOpenImages={(fromMenu = false) => navigate('images', fromMenu)}
+      onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)}
+      onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)}
     />
   )
 }
