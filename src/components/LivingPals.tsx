@@ -101,7 +101,7 @@ export function LivingPals({ page }: LivingPalsProps): JSX.Element {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[40] overflow-hidden" aria-label="Pilgrix living companions">
+    <div className="pointer-events-none fixed inset-0 z-[40] overflow-hidden" data-pilgrix-living-pals="true" aria-label="Pilgrix living companions">
       {pals.map((pal) => {
         const position = positions[pal.id] ?? { x: pal.x, y: pal.y, scale: 1, rotate: 0 }
         const isPressed = pressed === pal.id
