@@ -26,8 +26,9 @@ function App(): JSX.Element {
   const [menuReturnSignal, setMenuReturnSignal] = useState(0)
 
   useEffect(() => {
-    const handleHashChange = () => setPage(pageFromHash())
-    window.addEventListener('hashchange', handleHashChange)
+    const handleNavigationChange = () => setPage(pageFromHash())
+    window.addEventListener('hashchange', handleNavigationChange)
+    window.addEventListener('popstate', handleNavigationChange)
 
     let active = true
     void fetchRuntimeConfig().then((runtimeConfig) => {
@@ -38,18 +39,18 @@ function App(): JSX.Element {
 
     return () => {
       active = false
-      window.removeEventListener('hashchange', handleHashChange)
+      window.removeEventListener('hashchange', handleNavigationChange)
+      window.removeEventListener('popstate', handleNavigationChange)
     }
   }, [])
 
   const navigate = (nextPage: Page, returnToMenu = false): void => {
     if (nextPage === 'ai') {
-      // Returning from a Workspace page must always reopen the Workspace drawer.
-      // Do this at the App level so the command survives the page component unmount.
       if (returnToMenu) setMenuReturnSignal((value) => value + 1)
 
-      // Do not use location.hash = '' here. On mobile browsers that can create
-      // an extra history transition and make the back button appear to do nothing.
+      // Return to the base route without creating another browser-history entry.
+      // This prevents the mobile browser Back action from getting trapped between
+      // the workspace page and the AI Lab home screen.
       if (window.location.hash) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }
