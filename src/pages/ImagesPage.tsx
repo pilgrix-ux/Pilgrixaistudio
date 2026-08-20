@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ArrowLeft, ArrowUp, ImagePlus, Mic, Paperclip, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ArrowUp, Camera, File, ImagePlus, Images, Mic, Plus, Sparkles, X } from 'lucide-react'
 
 type ChatAttachment = {
   id: string
@@ -25,7 +25,10 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
   const [messages, setMessages] = useState<Message[]>([])
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
   const [working, setWorking] = useState(false)
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const photosInputRef = useRef<HTMLInputElement>(null)
 
   const addAttachments = async (files: FileList | null): Promise<void> => {
     if (!files) return
@@ -43,6 +46,7 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
       next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: file.name, url })
     }
     setAttachments((current) => [...current, ...next].slice(0, 6))
+    setAttachmentMenuOpen(false)
   }
 
   const removeAttachment = (id: string): void => {
@@ -66,8 +70,7 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
     setAttachments([])
     setWorking(true)
 
-    // Keep the UI honest while the image-generation backend is being connected.
-    // No fake image/result is inserted into the conversation.
+    // Do not fabricate an image result. The real generation service can replace this state later.
     window.setTimeout(() => setWorking(false), 650)
   }
 
@@ -76,12 +79,12 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
   }
 
   return (
-    <main className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none bg-slate-50 font-sans text-slate-800">
-      <div className="pointer-events-none absolute left-1/2 top-[28%] h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-sky-200/35 via-indigo-200/25 to-violet-200/25 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-sky-200/20 blur-3xl" />
+    <main className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none bg-[#f7faff] font-sans text-slate-800">
+      <div className="pointer-events-none absolute left-1/2 top-[24%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-sky-200/30 via-indigo-200/20 to-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-80 w-80 rounded-full bg-sky-200/20 blur-3xl" />
 
       <header className="relative z-10 flex shrink-0 items-center justify-between px-5 pb-3 pt-[calc(1rem+env(safe-area-inset-top))]">
-        <button type="button" onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/85 text-slate-600 shadow-sm backdrop-blur-md active:scale-95" aria-label="Back to AI Lab">
+        <button type="button" onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/90 bg-white/85 text-slate-600 shadow-sm backdrop-blur-md transition active:scale-95" aria-label="Back to AI Lab">
           <ArrowLeft size={19} />
         </button>
         <div className="text-center">
@@ -95,18 +98,18 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
         <div className="mx-auto flex min-h-full w-full max-w-xl flex-col">
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center px-2 pb-8 pt-4 text-center">
-              <div className="relative mb-5 flex h-24 w-24 items-center justify-center rounded-[30px] border border-white/80 bg-white/75 shadow-xl shadow-indigo-500/10 backdrop-blur-xl">
+              <div className="relative mb-5 flex h-24 w-24 items-center justify-center rounded-[30px] border border-white/90 bg-white/75 shadow-xl shadow-indigo-500/10 backdrop-blur-xl">
                 <div className="absolute inset-2 rounded-[24px] bg-gradient-to-br from-sky-100 via-white to-indigo-100" />
                 <ImagePlus className="relative text-indigo-500" size={34} strokeWidth={1.7} />
                 <span className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/40" />
               </div>
               <p className="mb-1 bg-gradient-to-r from-sky-500 to-indigo-600 bg-clip-text text-[10px] font-extrabold uppercase tracking-[0.22em] text-transparent">IMAGE CREATION</p>
               <h2 className="max-w-sm text-2xl font-black tracking-tight text-slate-900">What do you want to create?</h2>
-              <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-400">Describe an image, upload a reference, or combine both. Your actual results will appear here.</p>
+              <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-400">Describe your idea or add a reference.</p>
 
               <div className="mt-7 flex max-w-sm flex-wrap justify-center gap-2">
                 {STARTER_PROMPTS.map((item) => (
-                  <button key={item} type="button" onClick={() => useStarter(item)} className="rounded-full border border-indigo-100/80 bg-white/80 px-3.5 py-2 text-[10px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition active:scale-95 hover:border-indigo-200 hover:text-indigo-600">
+                  <button key={item} type="button" onClick={() => useStarter(item)} className="rounded-full border border-indigo-100/80 bg-white/85 px-3.5 py-2 text-[10px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition active:scale-95 hover:border-indigo-200 hover:text-indigo-600">
                     {item}
                   </button>
                 ))}
@@ -116,7 +119,7 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
             <div className="flex flex-col gap-3 py-3">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[88%] ${message.role === 'user' ? 'rounded-3xl rounded-tr-md bg-slate-900 text-white' : 'rounded-3xl rounded-tl-md border border-indigo-100 bg-white/85 text-slate-700'} px-4 py-3 shadow-sm backdrop-blur-md`}>
+                  <div className={`max-w-[88%] ${message.role === 'user' ? 'rounded-3xl rounded-tr-md bg-slate-900 text-white' : 'rounded-3xl rounded-tl-md border border-indigo-100 bg-white/90 text-slate-700'} px-4 py-3 shadow-sm backdrop-blur-md`}>
                     <p className="text-xs leading-relaxed">{message.text}</p>
                     {message.attachments?.length ? (
                       <div className="mt-3 grid grid-cols-3 gap-1.5">
@@ -130,19 +133,31 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
                   </div>
                 </div>
               ))}
-              {working ? (
-                <div className="flex items-center gap-2 self-start rounded-2xl border border-indigo-100 bg-white/85 px-4 py-3 text-[11px] font-medium text-slate-500 shadow-sm backdrop-blur-md">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
-                  Ready for image generation
-                </div>
-              ) : null}
+              {working ? <div className="flex items-center gap-1.5 self-start px-2 py-1 text-[10px] text-slate-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400 [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400 [animation-delay:240ms]" /></div> : null}
             </div>
           )}
         </div>
       </section>
 
-      <footer className="relative z-20 shrink-0 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto max-w-xl rounded-[28px] border border-indigo-100/80 bg-white/90 p-3 shadow-xl shadow-indigo-500/10 backdrop-blur-xl">
+      <footer className="relative z-30 shrink-0 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
+        <div className="relative mx-auto max-w-xl rounded-[30px] border border-white/90 bg-white/92 p-2.5 shadow-[0_16px_50px_rgba(67,56,202,0.12)] backdrop-blur-2xl">
+          {attachmentMenuOpen ? (
+            <div className="absolute bottom-[calc(100%+10px)] left-1 flex w-[205px] flex-col overflow-hidden rounded-[24px] border border-white/90 bg-white/95 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-2xl">
+              <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition active:bg-slate-100">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-sky-600"><Camera size={19} /></span>
+                <span className="text-sm font-semibold text-slate-700">Camera</span>
+              </button>
+              <button type="button" onClick={() => photosInputRef.current?.click()} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition active:bg-slate-100">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><Images size={19} /></span>
+                <span className="text-sm font-semibold text-slate-700">Photos</span>
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition active:bg-slate-100">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600"><File size={19} /></span>
+                <span className="text-sm font-semibold text-slate-700">Files</span>
+              </button>
+            </div>
+          ) : null}
+
           {attachments.length > 0 ? (
             <div className="mb-2 flex gap-2 overflow-x-auto px-1 pb-1">
               {attachments.map((attachment) => (
@@ -154,20 +169,21 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
             </div>
           ) : null}
 
-          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') send() }} placeholder="Describe an image..." className="w-full bg-transparent px-2 py-1 text-sm text-slate-800 outline-none placeholder:text-slate-400" aria-label="Image prompt" />
-          <div className="mt-2 flex items-center justify-between px-1">
+          <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }} rows={1} placeholder="Describe an image..." className="max-h-28 min-h-10 w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-800 outline-none placeholder:text-slate-400" aria-label="Image prompt" />
+          <div className="mt-1 flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition active:scale-95" aria-label="Add reference image"><Paperclip size={16} /></button>
+              <button type="button" onClick={() => setAttachmentMenuOpen((open) => !open)} className={`flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 ${attachmentMenuOpen ? 'bg-slate-900 text-white rotate-45' : 'bg-slate-100 text-slate-600'}`} aria-label="Add reference"><Plus size={19} /></button>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { void addAttachments(event.target.files); event.currentTarget.value = '' }} />
+              <input ref={photosInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { void addAttachments(event.target.files); event.currentTarget.value = '' }} />
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { void addAttachments(event.target.files); event.currentTarget.value = '' }} />
-              <button type="button" onClick={() => setPrompt((value) => value || 'Create a polished image with cinematic lighting and a clean composition.')} className="flex h-9 items-center gap-1.5 rounded-full border border-indigo-100 bg-gradient-to-r from-sky-50 to-indigo-50 px-3 text-[10px] font-bold text-indigo-600" aria-label="Add image idea"><Sparkles size={13} /> Inspire</button>
+              <button type="button" onClick={() => setPrompt((value) => value || 'Create a polished image with cinematic lighting and a clean composition.')} className="flex h-10 items-center gap-1.5 rounded-full border border-indigo-100 bg-gradient-to-r from-sky-50 to-indigo-50 px-3 text-[10px] font-bold text-indigo-600" aria-label="Add image idea"><Sparkles size={13} /> Inspire</button>
             </div>
             <div className="flex items-center gap-1.5">
-              <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400" aria-label="Voice input"><Mic size={16} /></button>
-              <button type="button" onClick={send} disabled={(!prompt.trim() && attachments.length === 0) || working} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20 transition active:scale-95 disabled:opacity-35" aria-label="Send image prompt"><ArrowUp size={17} strokeWidth={2.6} /></button>
+              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400" aria-label="Voice input"><Mic size={17} /></button>
+              <button type="button" onClick={send} disabled={(!prompt.trim() && attachments.length === 0) || working} className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 transition active:scale-95 disabled:opacity-35" aria-label="Send image prompt"><ArrowUp size={18} strokeWidth={2.6} /></button>
             </div>
           </div>
         </div>
-        <p className="mx-auto mt-2 max-w-xl text-center text-[9px] font-medium text-slate-400">Image creation stays in this session until you save a real result.</p>
       </footer>
     </main>
   )
