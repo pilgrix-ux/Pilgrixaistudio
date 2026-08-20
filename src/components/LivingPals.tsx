@@ -1,19 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 
-type Pal = {
-  id: string
-  emoji: string
-  label: string
-  x: number
-  y: number
-  size: number
-  delay: number
-  drift: number
-}
+type Pal = { id: string; emoji: string; label: string; x: number; y: number; size: number; delay: number; drift: number }
+type LivingPalsProps = { page: 'ai' | 'images' }
+type Position = { x: number; y: number; scale: number; rotate: number }
 
-type LivingPalsProps = {
-  page: 'ai' | 'images'
-}
+type Gesture = { x: number; y: number; lastX: number; lastY: number; time: number }
 
 const AI_PALS: Pal[] = [
   { id: 'spark', emoji: '✦', label: 'Spark', x: 13, y: 25, size: 58, delay: 0, drift: 7 },
@@ -22,7 +13,6 @@ const AI_PALS: Pal[] = [
   { id: 'bubble', emoji: '◌', label: 'Bubble', x: 89, y: 64, size: 54, delay: 0.7, drift: 10 },
   { id: 'sprout', emoji: '⌁', label: 'Sprout', x: 19, y: 78, size: 46, delay: 1.8, drift: 6 },
 ]
-
 const IMAGE_PALS: Pal[] = [
   { id: 'dream', emoji: '✦', label: 'Dream', x: 12, y: 27, size: 58, delay: 0.3, drift: 8 },
   { id: 'color', emoji: '●', label: 'Color', x: 86, y: 28, size: 60, delay: 1.5, drift: 10 },
@@ -32,10 +22,10 @@ const IMAGE_PALS: Pal[] = [
 
 export function LivingPals({ page }: LivingPalsProps): JSX.Element {
   const pals = useMemo(() => page === 'ai' ? AI_PALS : IMAGE_PALS, [page])
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number; scale: number; rotate: number }>>({})
+  const [positions, setPositions] = useState<Record<string, Position>>({})
   const [pressed, setPressed] = useState<string | null>(null)
   const velocityRef = useRef<Record<string, { x: number; y: number }>>({})
-  const pointerRef = useRef<{ x: number; y: number; lastX: number; lastY: number; lastT: number; active: boolean }>({ x: 0, y: 0, lastX: 0, lastY: 0, lastT: 0, active: false })
+  const gestureRef = useRef<Record<string, Gesture>>({})
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -45,19 +35,18 @@ export function LivingPals({ page }: LivingPalsProps): JSX.Element {
 
   useEffect(() => {
     const tick = () => {
+      const time = performance.now()
       setPositions((current) => {
         const next = { ...current }
         for (const pal of pals) {
           const pos = next[pal.id]
           const velocity = velocityRef.current[pal.id]
           if (!pos || !velocity) continue
-          const idleX = Math.sin(Date.now() / 1800 + pal.delay) * 0.012 * pal.drift
-          const idleY = Math.cos(Date.now() / 2200 + pal.delay) * 0.009 * pal.drift
-          velocity.x = velocity.x * 0.91 + idleX
-          velocity.y = velocity.y * 0.91 + idleY
-          pos.x = Math.max(4, Math.min(96, pos.x + velocity.x))
-          pos.y = Math.max(17, Math.min(86, pos.y + velocity.y))
-          pos.rotate = Math.max(-10, Math.min(10, velocity.x * 38))
+          velocity.x = velocity.x * 0.93 + Math.sin(time / 1800 + pal.delay) * 0.0035 * pal.drift
+          velocity.y = velocity.y * 0.93 + Math.cos(time / 2200 + pal.delay) * 0.0028 * pal.drift
+          pos.x = Math.max(5, Math.min(95, pos.x + velocity.x))
+          pos.y = Math.max(18, Math.min(84, pos.y + velocity.y))
+          pos.rotate = Math.max(-12, Math.min(12, velocity.x * 90))
           pos.scale += (1 - pos.scale) * 0.08
         }
         return next
@@ -68,86 +57,75 @@ export function LivingPals({ page }: LivingPalsProps): JSX.Element {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [pals])
 
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * 100
-    const y = ((event.clientY - rect.top) / rect.height) * 100
-    const now = performance.now()
-    pointerRef.current = { x, y, lastX: pointerRef.current.x, lastY: pointerRef.current.y, lastT: now, active: true }
+  const getPercent = (event: PointerEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.parentElement?.parentElement?.getBoundingClientRect()
+    if (!rect) return { x: 50, y: 50 }
+    return { x: ((event.clientX - rect.left) / rect.width) * 100, y: ((event.clientY - rect.top) / rect.height) * 100 }
+  }
+
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>, id: string) => {
+    const point = getPercent(event)
+    gestureRef.current[id] = { x: point.x, y: point.y, lastX: point.x, lastY: point.y, time: performance.now() }
+    setPressed(id)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    setPositions((current) => ({ ...current, [id]: { ...current[id], scale: 0.88 } }))
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>, id: string) => {
+    const gesture = gestureRef.current[id]
+    if (!gesture) return
+    const point = getPercent(event)
+    const dx = point.x - gesture.lastX
+    const dy = point.y - gesture.lastY
+    velocityRef.current[id] = { x: dx * 0.65, y: dy * 0.65 }
+    gesture.lastX = point.x
+    gesture.lastY = point.y
+    gesture.time = performance.now()
     setPositions((current) => {
-      const next = { ...current }
-      for (const pal of pals) {
-        const pos = next[pal.id]
-        if (!pos) continue
-        const dx = pos.x - x
-        const dy = pos.y - y
-        const distance = Math.hypot(dx, dy)
-        if (distance < 18) {
-          const strength = (18 - distance) / 18
-          const safe = distance || 1
-          velocityRef.current[pal.id] = {
-            x: (dx / safe) * strength * 0.75,
-            y: (dy / safe) * strength * 0.75,
-          }
-          pos.scale = 1 + strength * 0.12
-        }
-      }
-      return next
+      const pos = current[id]
+      if (!pos) return current
+      return { ...current, [id]: { ...pos, x: point.x, y: point.y, scale: 0.94, rotate: Math.max(-14, Math.min(14, dx * 90)) } }
     })
   }
 
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * 100
-    const y = ((event.clientY - rect.top) / rect.height) * 100
-    const dx = x - pointerRef.current.lastX
-    const dy = y - pointerRef.current.lastY
-    const speed = Math.min(3, Math.hypot(dx, dy) * 0.18)
-    if (speed > 0.25) {
-      setPositions((current) => {
-        const next = { ...current }
-        for (const pal of pals) {
-          const pos = next[pal.id]
-          if (!pos) continue
-          const distance = Math.hypot(pos.x - x, pos.y - y)
-          if (distance < 22) velocityRef.current[pal.id] = { x: dx * speed, y: dy * speed }
-        }
-        return next
-      })
+  const release = (event: PointerEvent<HTMLButtonElement>, id: string) => {
+    const gesture = gestureRef.current[id]
+    if (gesture) {
+      const point = getPercent(event)
+      const dx = point.x - gesture.x
+      const dy = point.y - gesture.y
+      const distance = Math.hypot(dx, dy)
+      if (distance > 1.5) velocityRef.current[id] = { x: dx * 0.12, y: dy * 0.12 }
     }
-    pointerRef.current.active = false
+    delete gestureRef.current[id]
+    setPressed(null)
   }
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[15] overflow-hidden" aria-hidden="true">
-      <div className="pointer-events-auto absolute inset-0 touch-none" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => { pointerRef.current.active = false }}>
-        {pals.map((pal) => {
-          const position = positions[pal.id] ?? { x: pal.x, y: pal.y, scale: 1, rotate: 0 }
-          const isPressed = pressed === pal.id
-          return (
-            <button
-              key={pal.id}
-              type="button"
-              title={pal.label}
-              onPointerDown={() => { setPressed(pal.id); position.scale = 0.9 }}
-              onPointerUp={() => setPressed(null)}
-              onPointerCancel={() => setPressed(null)}
-              className="absolute flex items-center justify-center rounded-[38%] border border-white/90 bg-white/60 text-slate-700 shadow-[0_14px_35px_rgba(99,102,241,0.14),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl transition-transform duration-150 select-none active:brightness-105"
-              style={{
-                left: `${position.x}%`, top: `${position.y}%`, width: pal.size, height: pal.size,
-                transform: `translate(-50%,-50%) rotate(${position.rotate}deg) scale(${isPressed ? 0.88 : position.scale})`,
-                animation: `pilgrix-pal-float 4.8s ease-in-out ${pal.delay}s infinite`,
-              }}
-            >
-              <span className="relative flex h-[70%] w-[70%] items-center justify-center rounded-[40%] bg-gradient-to-br from-white via-sky-100/90 to-indigo-200/70 text-lg font-black text-indigo-500 shadow-[inset_0_2px_8px_rgba(255,255,255,0.95)]">
-                {pal.emoji}
-                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      <style>{`@keyframes pilgrix-pal-float{0%,100%{margin-top:0px}50%{margin-top:-7px}}@media(prefers-reduced-motion:reduce){.pointer-events-auto button{animation:none!important}}`}</style>
+      {pals.map((pal) => {
+        const position = positions[pal.id] ?? { x: pal.x, y: pal.y, scale: 1, rotate: 0 }
+        const isPressed = pressed === pal.id
+        return (
+          <button
+            key={pal.id}
+            type="button"
+            title={pal.label}
+            aria-label={`${pal.label} interactive companion`}
+            onPointerDown={(event) => handlePointerDown(event, pal.id)}
+            onPointerMove={(event) => handlePointerMove(event, pal.id)}
+            onPointerUp={(event) => release(event, pal.id)}
+            onPointerCancel={(event) => release(event, pal.id)}
+            className="pointer-events-auto absolute flex items-center justify-center rounded-[38%] border border-white/90 bg-white/60 text-slate-700 shadow-[0_14px_35px_rgba(99,102,241,0.14),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl select-none transition-[filter] duration-150 active:brightness-105"
+            style={{ left: `${position.x}%`, top: `${position.y}%`, width: pal.size, height: pal.size, transform: `translate(-50%,-50%) rotate(${position.rotate}deg) scale(${isPressed ? 0.9 : position.scale})`, animation: `pilgrix-pal-float 4.8s ease-in-out ${pal.delay}s infinite`, touchAction: 'none' }}
+          >
+            <span className="relative flex h-[70%] w-[70%] items-center justify-center rounded-[40%] bg-gradient-to-br from-white via-sky-100/90 to-indigo-200/70 text-lg font-black text-indigo-500 shadow-[inset_0_2px_8px_rgba(255,255,255,0.95)]">
+              {pal.emoji}<span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+            </span>
+          </button>
+        )
+      })}
+      <style>{`@keyframes pilgrix-pal-float{0%,100%{margin-top:0px}50%{margin-top:-7px}}@media(prefers-reduced-motion:reduce){.pointer-events-auto{animation:none!important}}`}</style>
     </div>
   )
 }
