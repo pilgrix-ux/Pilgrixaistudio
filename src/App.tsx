@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CodePenAiLab } from '@/components/CodePenAiLab'
+import { LivingPals } from '@/components/LivingPals'
 import { ImagesPage } from '@/pages/ImagesPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
 import { SearchCreationsPage } from '@/pages/SearchCreationsPage'
@@ -68,10 +69,10 @@ function App(): JSX.Element {
   }
 
   if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai', true)} />
-  if (page === 'images') return <ImagesPage onBack={() => navigate('ai', true)} />
+  if (page === 'images') return <><ImagesPage onBack={() => navigate('ai', true)} /><LivingPals page="images" /></>
   if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai', true)} />
   if (page === 'settings') return <SettingsPage onBack={() => navigate('ai', true)} />
-  return <CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} />
+  return <><CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} /><LivingPals page="ai" /></>
 }
 
 export default App
