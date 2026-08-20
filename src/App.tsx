@@ -14,6 +14,7 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
+  // Keep the app entrypoint current so the connected Vercel project picks up the latest UI commit.
   return <CodePenAiLab />
 }
 
