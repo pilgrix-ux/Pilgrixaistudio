@@ -27,6 +27,56 @@ body {
   touch-action: manipulation;
 }
 
+/* Runtime-wide soft interaction glow. Every real interactive control gets a subtle
+   cyan/indigo halo on hover, keyboard focus, and touch/press without changing layout. */
+button,
+a,
+[role='button'],
+input[type='button'],
+input[type='submit'],
+input[type='reset'] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 180ms ease, filter 180ms ease, transform 120ms ease, background-color 180ms ease;
+}
+
+button:hover,
+a:hover,
+[role='button']:hover,
+input[type='button']:hover,
+input[type='submit']:hover,
+input[type='reset']:hover,
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input[type='button']:focus-visible,
+input[type='submit']:focus-visible,
+input[type='reset']:focus-visible {
+  box-shadow: 0 0 0 1px rgba(255,255,255,.92) inset, 0 0 18px rgba(56,189,248,.20), 0 0 32px rgba(99,102,241,.10) !important;
+  filter: brightness(1.015);
+}
+
+button:active,
+a:active,
+[role='button']:active,
+input[type='button']:active,
+input[type='submit']:active,
+input[type='reset']:active {
+  box-shadow: 0 0 0 1px rgba(255,255,255,.85) inset, 0 0 24px rgba(56,189,248,.28), 0 0 38px rgba(99,102,241,.14) !important;
+}
+
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+
+button:disabled:hover,
+button:disabled:focus-visible,
+button:disabled:active {
+  box-shadow: none !important;
+  filter: none;
+}
+
 /* Final AI Lab refinement: keep the workspace focused on the creation surface. */
 .ai-lab-view > .section-heading,
 .ai-lab-view > .suggestion-grid,
