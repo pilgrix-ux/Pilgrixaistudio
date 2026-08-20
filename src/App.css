@@ -15,3 +15,108 @@ body,
 #root {
   min-height: 100%;
 }
+
+/* Final AI Lab refinement: keep the workspace focused on the creation surface. */
+.ai-lab-view > .section-heading,
+.ai-lab-view > .suggestion-grid,
+.ai-lab-view > .creations-heading,
+.ai-lab-view > .recent-creations {
+  display: none !important;
+}
+
+/* Remove the secondary mode/sparkle label beside the composer controls. */
+.composer .composer-mode {
+  display: none !important;
+}
+
+/* Soft Aurora light-theme composer: premium, calm and unmistakably Pilgrix. */
+.pilgrix-shell[data-theme="aurora"] .composer-zone {
+  margin-top: 20px;
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer-glow {
+  opacity: .72;
+  filter: blur(52px);
+}
+
+.pilgrix-shell[data-theme="aurora"] .glow-blue {
+  background: #5acbff;
+  width: 48%;
+  height: 100px;
+  left: 2%;
+  top: 4px;
+}
+
+.pilgrix-shell[data-theme="aurora"] .glow-violet {
+  background: #b79aff;
+  width: 44%;
+  height: 100px;
+  right: 2%;
+  top: 2px;
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer {
+  min-height: 178px;
+  background:
+    radial-gradient(circle at 14% 92%, rgba(87, 211, 255, .16), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(177, 142, 255, .18), transparent 32%),
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(246,250,255,.96) 54%, rgba(251,247,255,.98));
+  border: 1px solid rgba(104, 178, 255, .50);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.92) inset,
+    0 18px 60px rgba(70, 119, 190, .12),
+    0 0 58px rgba(105, 184, 255, .16),
+    0 0 76px rgba(179, 145, 255, .10);
+  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer textarea {
+  color: #151d2b;
+  font-size: clamp(20px, 2.6vw, 28px);
+  font-weight: 560;
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer textarea::placeholder {
+  color: #9aa9bd;
+  opacity: 1;
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer-plus {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(70, 185, 238, .28);
+  box-shadow: 0 8px 24px rgba(69, 166, 224, .10), 0 0 24px rgba(77, 210, 255, .08);
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer-tool-grid {
+  background: rgba(255,255,255,.78);
+  border-color: rgba(79, 116, 163, .12);
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer-mic {
+  background: #111722;
+  color: white;
+  border-color: #111722;
+  box-shadow: 0 10px 26px rgba(17,23,34,.16);
+}
+
+.pilgrix-shell[data-theme="aurora"] .send-button {
+  background: linear-gradient(145deg, #171d28, #0c111a);
+  box-shadow: 0 12px 30px rgba(20, 28, 40, .20), 0 0 24px rgba(83, 190, 255, .12);
+}
+
+.pilgrix-shell[data-theme="aurora"] .composer-note {
+  color: #a3afbf;
+}
+
+@media (max-width: 680px) {
+  .pilgrix-shell[data-theme="aurora"] .composer {
+    min-height: 166px;
+    border-radius: 27px;
+    padding: 13px;
+  }
+
+  .pilgrix-shell[data-theme="aurora"] .composer-glow {
+    filter: blur(44px);
+  }
+}
