@@ -23,6 +23,7 @@ function pageFromHash(): Page {
 
 function App(): JSX.Element {
   const [page, setPage] = useState<Page>(pageFromHash)
+  const [menuReturnSignal, setMenuReturnSignal] = useState(0)
 
   useEffect(() => {
     const handleHashChange = () => setPage(pageFromHash())
@@ -41,7 +42,11 @@ function App(): JSX.Element {
     }
   }, [])
 
-  const navigate = (nextPage: Page): void => {
+  const navigate = (nextPage: Page, returnToMenu = false): void => {
+    if (nextPage === 'ai' && returnToMenu) {
+      setMenuReturnSignal((value) => value + 1)
+    }
+
     const nextHash = nextPage === 'ai' ? '' : `#${nextPage}`
     if (window.location.hash === nextHash) {
       setPage(nextPage)
@@ -50,13 +55,14 @@ function App(): JSX.Element {
     window.location.hash = nextHash
   }
 
-  if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai')} />
-  if (page === 'images') return <ImagesPage onBack={() => navigate('ai')} />
-  if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai')} />
-  if (page === 'settings') return <SettingsPage onBack={() => navigate('ai')} />
+  if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai', true)} />
+  if (page === 'images') return <ImagesPage onBack={() => navigate('ai', true)} />
+  if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai', true)} />
+  if (page === 'settings') return <SettingsPage onBack={() => navigate('ai', true)} />
 
   return (
     <CodePenAiLab
+      menuReturnSignal={menuReturnSignal}
       onOpenProjects={() => navigate('projects')}
       onOpenImages={() => navigate('images')}
       onOpenSearch={() => navigate('search')}
