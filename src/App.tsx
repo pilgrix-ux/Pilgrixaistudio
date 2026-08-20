@@ -1,9 +1,8 @@
 import { useEffect } from 'react'
-import { AiLabWorkspace } from '@/components/AiLabWorkspace'
+import { ReferenceAiLab } from '@/components/ReferenceAiLab'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 
-// Build verification marker: deploy the current, type-safe AI Lab workspace.
 function App(): JSX.Element {
   useEffect(() => {
     let active = true
@@ -15,7 +14,7 @@ function App(): JSX.Element {
     return () => { active = false }
   }, [])
 
-  return <AiLabWorkspace />
+  return <ReferenceAiLab />
 }
 
 export default App
