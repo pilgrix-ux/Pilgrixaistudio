@@ -14,11 +14,11 @@ export function CodePenAiLab(): JSX.Element {
   }
 
   return (
-    <main className="relative flex h-screen flex-col justify-between overflow-hidden bg-slate-50/90 font-sans text-slate-800">
+    <main className="fixed inset-0 z-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none bg-slate-50/90 font-sans text-slate-800">
       <div className="pointer-events-none absolute left-1/2 top-1/3 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-indigo-200/35 via-sky-200/30 to-purple-200/35 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 left-10 h-64 w-64 rounded-full bg-sky-200/20 blur-2xl" />
 
-      <header className="relative z-10 flex items-center justify-between px-5 py-4">
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-5 py-4">
         <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 text-slate-600 shadow-sm backdrop-blur-md transition hover:bg-white hover:text-indigo-600 active:scale-95" aria-label="Menu">
           <Menu size={20} />
         </button>
@@ -31,12 +31,14 @@ export function CodePenAiLab(): JSX.Element {
         </button>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-xl flex-1 flex-col justify-end gap-4 p-4">
-        {sent && <div className="self-end rounded-2xl rounded-tr-sm bg-slate-900 px-4 py-2.5 text-xs font-medium text-white shadow-md">{prompt}</div>}
-        {working && <div className="w-full max-w-xs rounded-2xl border border-indigo-100/90 bg-white/85 p-4 shadow-xl shadow-indigo-500/5 backdrop-blur-md"><div className="mb-1 flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" /></span><p className="text-xs font-semibold text-slate-800">Processing session request...</p></div><p className="pl-4 text-[11px] leading-relaxed text-slate-500">Applying your instructions and generating your video edit.</p></div>}
-      </main>
+      <section className="relative z-10 min-h-0 flex-1 overflow-hidden">
+        <div className="mx-auto flex h-full w-full max-w-xl flex-col justify-end gap-4 overflow-hidden p-4">
+          {sent && <div className="shrink-0 self-end rounded-2xl rounded-tr-sm bg-slate-900 px-4 py-2.5 text-xs font-medium text-white shadow-md">{prompt}</div>}
+          {working && <div className="shrink-0 w-full max-w-xs rounded-2xl border border-indigo-100/90 bg-white/85 p-4 shadow-xl shadow-indigo-500/5 backdrop-blur-md"><div className="mb-1 flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" /></span><p className="text-xs font-semibold text-slate-800">Processing session request...</p></div><p className="pl-4 text-[11px] leading-relaxed text-slate-500">Applying your instructions and generating your video edit.</p></div>}
+        </div>
+      </section>
 
-      <footer className="relative z-10 w-full p-4 pb-5">
+      <footer className="relative z-10 w-full shrink-0 p-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-xl rounded-3xl border border-indigo-100/80 bg-white/90 p-4 shadow-xl shadow-indigo-500/10 backdrop-blur-xl">
           <input value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send() }} placeholder="Tell Pilgrix what you want to make..." className="w-full bg-transparent px-1 text-sm text-slate-800 outline-none placeholder:text-slate-400" />
           <div className="mt-3 flex items-center justify-between pt-1">
