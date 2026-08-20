@@ -27,8 +27,9 @@ body {
   touch-action: manipulation;
 }
 
-/* Runtime-wide soft interaction glow. Every real interactive control gets a subtle
-   cyan/indigo halo on hover, keyboard focus, and touch/press without changing layout. */
+/* Mobile-safe soft interaction glow.
+   :focus is intentional here: Android browsers often keep focus after a tap,
+   while :hover is unreliable on touch screens. */
 button,
 a,
 [role='button'],
@@ -46,13 +47,20 @@ a:hover,
 input[type='button']:hover,
 input[type='submit']:hover,
 input[type='reset']:hover,
+button:focus,
+a:focus,
+[role='button']:focus,
+input[type='button']:focus,
+input[type='submit']:focus,
+input[type='reset']:focus,
 button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible,
 input[type='button']:focus-visible,
 input[type='submit']:focus-visible,
 input[type='reset']:focus-visible {
-  box-shadow: 0 0 0 1px rgba(255,255,255,.92) inset, 0 0 18px rgba(56,189,248,.20), 0 0 32px rgba(99,102,241,.10) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.96) inset, 0 0 14px rgba(56,189,248,.22), 0 0 28px rgba(99,102,241,.13) !important;
   filter: brightness(1.015);
 }
 
@@ -62,7 +70,9 @@ a:active,
 input[type='button']:active,
 input[type='submit']:active,
 input[type='reset']:active {
-  box-shadow: 0 0 0 1px rgba(255,255,255,.85) inset, 0 0 24px rgba(56,189,248,.28), 0 0 38px rgba(99,102,241,.14) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.9) inset, 0 0 20px rgba(56,189,248,.30), 0 0 34px rgba(99,102,241,.17) !important;
+  filter: brightness(1.02);
 }
 
 button:disabled,
@@ -71,6 +81,7 @@ input:disabled {
 }
 
 button:disabled:hover,
+button:disabled:focus,
 button:disabled:focus-visible,
 button:disabled:active {
   box-shadow: none !important;
@@ -85,7 +96,6 @@ button:disabled:active {
   display: none !important;
 }
 
-/* Remove the secondary mode/sparkle label beside the composer controls. */
 .composer .composer-mode {
   display: none !important;
 }
@@ -175,7 +185,6 @@ button:disabled:active {
   box-shadow: 0 12px 30px rgba(16, 23, 34, .20), 0 0 26px rgba(83, 190, 255, .15);
 }
 
-/* The composer is the hero: don't let secondary card rails/templates compete with it. */
 .ai-lab-view .context-rail,
 .ai-lab-view .starter-row,
 .ai-lab-view .composer-hint {
