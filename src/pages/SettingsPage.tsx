@@ -4,39 +4,23 @@ import '@/styles/crystal-theme.css'
 
 const THEME_KEY = 'pilgrix.settings.theme'
 const NOTIFICATIONS_KEY = 'pilgrix.settings.notifications'
-
-const readDarkPreference = () => window.localStorage.getItem(THEME_KEY) === 'dark'
-const applyTheme = (dark: boolean) => {
-  document.documentElement.dataset.pilgrixTheme = dark ? 'crystal-night' : 'light'
-}
+const emitThemeChange = () => window.dispatchEvent(new Event('pilgrix-theme-change'))
 
 export function SettingsPage({ onBack }: { onBack: () => void }): JSX.Element {
-  // Pilgrix always starts in light mode unless the user has explicitly enabled Dark appearance.
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => window.localStorage.getItem(THEME_KEY) === 'dark')
   const [notifications, setNotifications] = useState(true)
 
   useEffect(() => {
-    const dark = readDarkPreference()
-    setDarkMode(dark)
-    applyTheme(dark)
-
     const stored = window.localStorage.getItem(NOTIFICATIONS_KEY)
     if (stored !== null) setNotifications(stored === 'true')
   }, [])
-
-  useEffect(() => {
-    applyTheme(darkMode)
-    return () => {
-      // Never let a system/browser preference silently turn the theme back on.
-      applyTheme(readDarkPreference())
-    }
-  }, [darkMode])
 
   const toggleTheme = () => {
     const next = !darkMode
     setDarkMode(next)
     window.localStorage.setItem(THEME_KEY, next ? 'dark' : 'light')
-    applyTheme(next)
+    document.documentElement.dataset.pilgrixTheme = next ? 'crystal-night' : 'light'
+    emitThemeChange()
   }
 
   const toggleNotifications = () => {
@@ -45,7 +29,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): JSX.Element {
     window.localStorage.setItem(NOTIFICATIONS_KEY, String(next))
   }
 
-  return <main className={`fixed inset-0 z-0 flex h-[100dvh] w-full flex-col overflow-hidden font-sans ${darkMode ? 'pilgrix-settings-crystal' : 'bg-slate-50/95 text-slate-800'}`}>
+  return <main className="pilgrix-settings-page fixed inset-0 z-0 flex h-[100dvh] w-full flex-col overflow-hidden font-sans">
     <div className="pointer-events-none absolute right-0 top-10 h-80 w-80 rounded-full bg-gradient-to-br from-sky-200/35 to-indigo-200/25 blur-3xl" />
     <header className="relative z-10 flex shrink-0 items-center gap-3 px-5 pb-4 pt-6"><button type="button" onClick={onBack} className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/80 bg-white/85 text-slate-600 shadow-sm"><ArrowLeft size={17} /></button><div><p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-sky-500">PILGRIX</p><h1 className="text-2xl font-black tracking-tight text-slate-900">Settings</h1></div></header>
     <section className="relative z-10 min-h-0 flex-1 overflow-y-auto px-5 pb-8">
