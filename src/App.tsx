@@ -9,30 +9,58 @@ import './App.css'
 
 type Page = 'ai' | 'projects' | 'images' | 'search' | 'settings'
 
+const HASH_TO_PAGE: Record<string, Page> = {
+  '#projects': 'projects',
+  '#images': 'images',
+  '#search': 'search',
+  '#settings': 'settings',
+}
+
+function pageFromHash(): Page {
+  if (typeof window === 'undefined') return 'ai'
+  return HASH_TO_PAGE[window.location.hash] ?? 'ai'
+}
+
 function App(): JSX.Element {
-  const [page, setPage] = useState<Page>('ai')
+  const [page, setPage] = useState<Page>(pageFromHash)
 
   useEffect(() => {
+    const handleHashChange = () => setPage(pageFromHash())
+    window.addEventListener('hashchange', handleHashChange)
+
     let active = true
     void fetchRuntimeConfig().then((runtimeConfig) => {
       if (!active || !runtimeConfig) return
       applyRuntimeTheme(runtimeConfig)
       document.documentElement.dataset.runtimeConfigVersion = String(runtimeConfig.version)
     })
-    return () => { active = false }
+
+    return () => {
+      active = false
+      window.removeEventListener('hashchange', handleHashChange)
+    }
   }, [])
 
-  if (page === 'projects') return <ProjectsPage onBack={() => setPage('ai')} />
-  if (page === 'images') return <ImagesPage onBack={() => setPage('ai')} />
-  if (page === 'search') return <SearchCreationsPage onBack={() => setPage('ai')} />
-  if (page === 'settings') return <SettingsPage onBack={() => setPage('ai')} />
+  const navigate = (nextPage: Page): void => {
+    const nextHash = nextPage === 'ai' ? '' : `#${nextPage}`
+    if (window.location.hash === nextHash) {
+      setPage(nextPage)
+      return
+    }
+    window.location.hash = nextHash
+  }
+
+  if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai')} />
+  if (page === 'images') return <ImagesPage onBack={() => navigate('ai')} />
+  if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai')} />
+  if (page === 'settings') return <SettingsPage onBack={() => navigate('ai')} />
 
   return (
     <CodePenAiLab
-      onOpenProjects={() => setPage('projects')}
-      onOpenImages={() => setPage('images')}
-      onOpenSearch={() => setPage('search')}
-      onOpenSettings={() => setPage('settings')}
+      onOpenProjects={() => navigate('projects')}
+      onOpenImages={() => navigate('images')}
+      onOpenSearch={() => navigate('search')}
+      onOpenSettings={() => navigate('settings')}
     />
   )
 }
