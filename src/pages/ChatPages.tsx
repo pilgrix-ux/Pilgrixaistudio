@@ -12,6 +12,7 @@ export type ChatRecord = {
 }
 
 const CHAT_KEY = 'pilgrix.chat.history.v1'
+const CHAT_EVENT = 'pilgrix-chat-change'
 
 export function loadChats(): ChatRecord[] {
   if (typeof window === 'undefined') return []
@@ -26,6 +27,7 @@ export function loadChats(): ChatRecord[] {
 
 function saveChats(chats: ChatRecord[]): void {
   window.localStorage.setItem(CHAT_KEY, JSON.stringify(chats.slice(0, 100)))
+  window.dispatchEvent(new Event(CHAT_EVENT))
 }
 
 export function createChat(prompt: string, attachmentCount = 0): ChatRecord {
@@ -81,10 +83,10 @@ export function ChatHistoryPage({ onBack, onOpenChat }: HistoryProps): JSX.Eleme
   useEffect(() => {
     const sync = () => setChats(loadChats())
     window.addEventListener('storage', sync)
-    window.addEventListener('pilgrix-chat-change', sync)
+    window.addEventListener(CHAT_EVENT, sync)
     return () => {
       window.removeEventListener('storage', sync)
-      window.removeEventListener('pilgrix-chat-change', sync)
+      window.removeEventListener(CHAT_EVENT, sync)
     }
   }, [])
 
@@ -133,8 +135,8 @@ export function ConversationPage({ id, onBack }: ConversationProps): JSX.Element
 
   useEffect(() => {
     const sync = () => setChat(getChat(id))
-    window.addEventListener('pilgrix-chat-change', sync)
-    return () => window.removeEventListener('pilgrix-chat-change', sync)
+    window.addEventListener(CHAT_EVENT, sync)
+    return () => window.removeEventListener(CHAT_EVENT, sync)
   }, [id])
 
   if (!chat) return <ChatHistoryPage onBack={onBack} onOpenChat={() => undefined} />
@@ -145,7 +147,6 @@ export function ConversationPage({ id, onBack }: ConversationProps): JSX.Element
     const updated = appendChatMessage(id, { role: 'user', text })
     if (updated) setChat(updated)
     setPrompt('')
-    window.dispatchEvent(new Event('pilgrix-chat-change'))
   }
 
   return (
