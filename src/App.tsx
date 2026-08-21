@@ -7,6 +7,7 @@ import { SearchCreationsPage } from '@/pages/SearchCreationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { ChatHistoryPage, ConversationPage } from '@/pages/ChatPages'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
+import { startConversationPersistence } from '@/services/conversationPersistence'
 import './App.css'
 import '@/styles/crystal-theme.css'
 
@@ -42,6 +43,7 @@ function App(): JSX.Element {
   useEffect(() => { applyTheme(theme) }, [theme])
 
   useEffect(() => {
+    const stopConversationPersistence = startConversationPersistence()
     const handleNavigationChange = () => setPage(pageFromHash())
     const handleThemeChange = () => setTheme(readTheme())
     window.addEventListener('hashchange', handleNavigationChange)
@@ -55,6 +57,7 @@ function App(): JSX.Element {
     })
     return () => {
       active = false
+      stopConversationPersistence()
       window.removeEventListener('hashchange', handleNavigationChange)
       window.removeEventListener('popstate', handleNavigationChange)
       window.removeEventListener('pilgrix-theme-change', handleThemeChange)
