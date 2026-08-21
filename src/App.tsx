@@ -5,17 +5,24 @@ import { ImagesPage } from '@/pages/ImagesPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
 import { SearchCreationsPage } from '@/pages/SearchCreationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { ChatHistoryPage, ConversationPage } from '@/pages/ChatPages'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
 import './App.css'
 import '@/styles/crystal-theme.css'
 
-type Page = 'ai' | 'projects' | 'images' | 'search' | 'settings'
-const HASH_TO_PAGE: Record<string, Page> = { '#projects': 'projects', '#images': 'images', '#search': 'search', '#settings': 'settings' }
+type Page = 'ai' | 'projects' | 'images' | 'search' | 'settings' | 'chats' | 'conversation'
+const HASH_TO_PAGE: Record<string, Page> = { '#projects': 'projects', '#images': 'images', '#search': 'search', '#settings': 'settings', '#chats': 'chats' }
 const THEME_KEY = 'pilgrix.settings.theme'
 
 function pageFromHash(): Page {
   if (typeof window === 'undefined') return 'ai'
+  if (window.location.hash.startsWith('#chat/')) return 'conversation'
   return HASH_TO_PAGE[window.location.hash] ?? 'ai'
+}
+
+function chatIdFromHash(): string {
+  if (typeof window === 'undefined') return ''
+  return decodeURIComponent(window.location.hash.slice('#chat/'.length))
 }
 
 function readTheme(): 'light' | 'dark' {
@@ -32,9 +39,7 @@ function App(): JSX.Element {
   const [menuReturnSignal, setMenuReturnSignal] = useState(0)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
 
-  useEffect(() => {
-    applyTheme(theme)
-  }, [theme])
+  useEffect(() => { applyTheme(theme) }, [theme])
 
   useEffect(() => {
     const handleNavigationChange = () => setPage(pageFromHash())
@@ -56,14 +61,14 @@ function App(): JSX.Element {
     }
   }, [])
 
-  const navigate = (nextPage: Page, returnToMenu = false): void => {
+  const navigate = (nextPage: Page, returnToMenu = false, chatId = ''): void => {
     if (nextPage === 'ai') {
       if (returnToMenu) setMenuReturnSignal((value) => value + 1)
       if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search)
       setPage('ai')
       return
     }
-    const nextHash = `#${nextPage}`
+    const nextHash = nextPage === 'conversation' ? `#chat/${encodeURIComponent(chatId)}` : `#${nextPage}`
     if (window.location.hash !== nextHash) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`)
     setPage(nextPage)
   }
@@ -72,7 +77,9 @@ function App(): JSX.Element {
   if (page === 'images') return <><ImagesPage onBack={() => navigate('ai', true)} /><LivingPals page="images" /></>
   if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai', true)} />
   if (page === 'settings') return <SettingsPage onBack={() => navigate('ai', true)} />
-  return <><CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} /><LivingPals page="ai" /></>
+  if (page === 'chats') return <ChatHistoryPage onBack={() => navigate('ai', true)} onOpenChat={(id) => navigate('conversation', false, id)} />
+  if (page === 'conversation') return <ConversationPage id={chatIdFromHash()} onBack={() => navigate('chats')} />
+  return <><CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} onOpenChats={(fromMenu = false) => navigate('chats', fromMenu)} onOpenConversation={(id) => navigate('conversation', false, id)} /><LivingPals page="ai" /></>
 }
 
 export default App
