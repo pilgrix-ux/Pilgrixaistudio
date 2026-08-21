@@ -1,4 +1,4 @@
-import { authService } from '@/services/authService'
+import { authService, AUTH_EVENT } from '@/services/authService'
 import { config } from '@/lib/config'
 import type { AuthSession } from '@/types'
 
@@ -24,10 +24,12 @@ const CHAT_KEY = 'pilgrix.chat.history.v1'
 const CHAT_EVENT = 'pilgrix-chat-change'
 const PENDING_KEY = 'pilgrix.chat.sync.pending.v1'
 const KNOWN_KEY = 'pilgrix.chat.sync.known.v1'
+const OWNER_KEY = 'pilgrix.chat.sync.owner.v1'
 
 let started = false
 let syncing = false
 let retryTimer: number | undefined
+let activeUserId: string | null = null
 let knownIds = new Set<string>()
 
 const readLocal = (): PersistedChat[] => {
@@ -43,6 +45,15 @@ const writeLocal = (chats: PersistedChat[]): void => {
     window.localStorage.setItem(CHAT_KEY, JSON.stringify(chats.slice(0, 100)))
     window.dispatchEvent(new Event(CHAT_EVENT))
   } catch { /* local cache is best-effort */ }
+}
+
+const clearLocal = (): void => {
+  try {
+    window.localStorage.removeItem(CHAT_KEY)
+    window.localStorage.removeItem(PENDING_KEY)
+    window.localStorage.removeItem(KNOWN_KEY)
+    window.dispatchEvent(new Event(CHAT_EVENT))
+  } catch { /* ignore */ }
 }
 
 const readPending = (): string[] => {
@@ -71,11 +82,7 @@ const request = async (path: string, options: RequestInit = {}): Promise<Respons
   if (!current.token) throw new Error('Authentication required')
   return fetch(`${apiBase()}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${current.token}`,
-      ...(options.headers || {}),
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${current.token}`, ...(options.headers || {}) },
   })
 }
 
@@ -119,8 +126,20 @@ const mergeChats = (local: PersistedChat[], remote: PersistedChat[]): PersistedC
   return [...merged.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 100)
 }
 
+const pushChat = async (chat: PersistedChat): Promise<boolean> => {
+  try {
+    const response = await request('/api/conversations', { method: 'POST', body: JSON.stringify({ conversation: toServerChat(chat) }) })
+    if (!response.ok) throw new Error(`sync failed: ${response.status}`)
+    knownIds.add(chat.id)
+    return true
+  } catch { return false }
+}
+
 const hydrate = async (): Promise<void> => {
   if (!isAuthenticated()) return
+  const userId = session().user?.id || null
+  if (!userId) return
+  activeUserId = userId
   try {
     const response = await request('/api/conversations')
     if (!response.ok) throw new Error(`hydrate failed: ${response.status}`)
@@ -129,21 +148,15 @@ const hydrate = async (): Promise<void> => {
     const local = readLocal()
     const merged = mergeChats(local, remote)
     knownIds = new Set(remote.map((chat) => chat.id))
-    try { window.localStorage.setItem(KNOWN_KEY, JSON.stringify([...knownIds])) } catch { /* ignore */ }
+    try {
+      window.localStorage.setItem(KNOWN_KEY, JSON.stringify([...knownIds]))
+      window.localStorage.setItem(OWNER_KEY, userId)
+    } catch { /* ignore */ }
     writeLocal(merged)
     for (const chat of merged) await pushChat(chat)
   } catch {
     // Keep the local cache fully usable while offline or before the backend is configured.
   }
-}
-
-const pushChat = async (chat: PersistedChat): Promise<boolean> => {
-  try {
-    const response = await request('/api/conversations', { method: 'POST', body: JSON.stringify({ conversation: toServerChat(chat) }) })
-    if (!response.ok) throw new Error(`sync failed: ${response.status}`)
-    knownIds.add(chat.id)
-    return true
-  } catch { return false }
 }
 
 const deleteChat = async (id: string): Promise<boolean> => {
@@ -181,13 +194,26 @@ const scheduleFlush = (): void => {
   retryTimer = window.setTimeout(() => { void flush() }, 250)
 }
 
+const handleAuthChange = (): void => {
+  const current = session()
+  const nextUserId = current.status === 'authenticated' ? current.user?.id || null : null
+  if (nextUserId === activeUserId) return
+  activeUserId = nextUserId
+  knownIds = new Set()
+  if (!nextUserId) {
+    clearLocal()
+    return
+  }
+  let owner = ''
+  try { owner = window.localStorage.getItem(OWNER_KEY) || '' } catch { /* ignore */ }
+  if (owner && owner !== nextUserId) clearLocal()
+  void hydrate().then(() => scheduleFlush())
+}
+
 export const saveImageCreation = async (creation: ImageCreationRecord): Promise<boolean> => {
   if (!isAuthenticated()) return false
   try {
-    const response = await request('/api/conversations', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'save_image', ...creation }),
-    })
+    const response = await request('/api/conversations', { method: 'POST', body: JSON.stringify({ action: 'save_image', ...creation }) })
     return response.ok
   } catch { return false }
 }
@@ -195,17 +221,21 @@ export const saveImageCreation = async (creation: ImageCreationRecord): Promise<
 export const startConversationPersistence = (): (() => void) => {
   if (started || typeof window === 'undefined') return () => undefined
   started = true
+  activeUserId = isAuthenticated() ? session().user?.id || null : null
 
   const onChange = () => scheduleFlush()
   const onOnline = () => { void flush() }
+  const onAuth = () => handleAuthChange()
   window.addEventListener(CHAT_EVENT, onChange)
   window.addEventListener('online', onOnline)
-  void hydrate().then(() => scheduleFlush())
+  window.addEventListener(AUTH_EVENT, onAuth)
+  if (activeUserId) void hydrate().then(() => scheduleFlush())
   const interval = window.setInterval(() => { void flush() }, 15000)
 
   return () => {
     window.removeEventListener(CHAT_EVENT, onChange)
     window.removeEventListener('online', onOnline)
+    window.removeEventListener(AUTH_EVENT, onAuth)
     window.clearInterval(interval)
     window.clearTimeout(retryTimer)
     started = false
