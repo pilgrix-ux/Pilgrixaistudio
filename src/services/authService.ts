@@ -3,21 +3,20 @@
  *
  * This app does not render an auth screen yet. The service remains the only auth
  * boundary and can connect to a real provider such as Supabase when public client
- * configuration is available. If the backend is not configured, it reports a
- * typed not_configured state instead of pretending authentication succeeded.
+ * configuration is available. If the backend is not configured, it reports a typed
+ * not_configured state instead of pretending authentication succeeded.
  */
 
 import { config, hasSupabaseConfig } from '@/lib/config'
 import type { AuthSession } from '@/types'
 
 const SESSION_KEY = config.auth.sessionStorageKey
+export const AUTH_EVENT = 'pilgrix-auth-change'
 
 const readStoredSession = (): AuthSession | null => {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY)
-    if (!raw) {
-      return null
-    }
+    if (!raw) return null
     return JSON.parse(raw) as AuthSession
   } catch {
     return null
@@ -27,6 +26,7 @@ const readStoredSession = (): AuthSession | null => {
 const writeStoredSession = (session: AuthSession): void => {
   try {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    window.dispatchEvent(new Event(AUTH_EVENT))
   } catch {
     // Ignore storage write failures in unsupported environments.
   }
@@ -37,25 +37,13 @@ const isSupabaseAuthConfigured = (): boolean => config.auth.provider === 'supaba
 export const authService = {
   restoreSession(): AuthSession {
     const stored = readStoredSession()
-    if (stored) {
-      return stored
-    }
-
-    if (config.auth.provider === 'none') {
-      return { user: null, status: 'not_configured', provider: 'none' }
-    }
-
+    if (stored) return stored
+    if (config.auth.provider === 'none') return { user: null, status: 'not_configured', provider: 'none' }
     return { user: null, status: 'anonymous', provider: 'supabase' }
   },
 
   async signInWithPassword(email: string, password: string): Promise<AuthSession> {
-    if (!isSupabaseAuthConfigured()) {
-      return {
-        user: null,
-        status: 'not_configured',
-        provider: 'none',
-      }
-    }
+    if (!isSupabaseAuthConfigured()) return { user: null, status: 'not_configured', provider: 'none' }
 
     const response = await fetch(`${config.integrations.supabaseUrl}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -67,13 +55,7 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     })
 
-    if (!response.ok) {
-      return {
-        user: null,
-        status: 'anonymous',
-        provider: 'supabase',
-      }
-    }
+    if (!response.ok) return { user: null, status: 'anonymous', provider: 'supabase' }
 
     const payload = (await response.json()) as {
       access_token?: string
@@ -82,19 +64,11 @@ export const authService = {
     }
 
     const session: AuthSession = {
-      user: payload.user
-        ? {
-            id: payload.user.id ?? 'unknown-user',
-            email: payload.user.email,
-            name: payload.user.user_metadata?.name,
-          }
-        : null,
+      user: payload.user ? { id: payload.user.id ?? 'unknown-user', email: payload.user.email, name: payload.user.user_metadata?.name } : null,
       status: payload.access_token ? 'authenticated' : 'anonymous',
       token: payload.access_token,
       provider: 'supabase',
-      expiresAt: payload.expires_in
-        ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
-        : undefined,
+      expiresAt: payload.expires_in ? new Date(Date.now() + payload.expires_in * 1000).toISOString() : undefined,
     }
 
     writeStoredSession(session)
@@ -104,30 +78,20 @@ export const authService = {
   async signOut(): Promise<AuthSession> {
     const current = this.restoreSession()
     if (config.auth.provider === 'none') {
-      return {
-        user: null,
-        status: 'not_configured',
-        provider: 'none',
-      }
+      const anonymous: AuthSession = { user: null, status: 'not_configured', provider: 'none' }
+      writeStoredSession(anonymous)
+      return anonymous
     }
 
     const token = current.token
     if (token && isSupabaseAuthConfigured()) {
       await fetch(`${config.integrations.supabaseUrl}/auth/v1/logout`, {
         method: 'POST',
-        headers: {
-          apikey: config.integrations.supabaseAnonKey,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { apikey: config.integrations.supabaseAnonKey, Authorization: `Bearer ${token}` },
       }).catch(() => undefined)
     }
 
-    const anonymous: AuthSession = {
-      user: null,
-      status: 'anonymous',
-      provider: 'supabase',
-    }
-
+    const anonymous: AuthSession = { user: null, status: 'anonymous', provider: 'supabase' }
     writeStoredSession(anonymous)
     return anonymous
   },
