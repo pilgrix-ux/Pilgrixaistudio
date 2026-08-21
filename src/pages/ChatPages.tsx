@@ -70,9 +70,10 @@ function FilterBar({ active, onChange }: { active: HistoryFilter; onChange: (fil
 
 function ImageCard({ item, onOpenChat }: { item: ImageCreationRecord; onOpenChat: (id: string) => void }): JSX.Element {
   const open = Boolean(item.conversationId)
-  return <button type="button" disabled={!open} onClick={() => item.conversationId && onOpenChat(item.conversationId)} className={`overflow-hidden rounded-[22px] border border-white bg-white/78 text-left shadow-[0_12px_35px_rgba(30,64,175,.07)] transition ${open ? 'active:scale-[.98]' : 'cursor-default'}`}>
-    <div className="h-32 overflow-hidden bg-gradient-to-br from-sky-50 via-white to-indigo-100">{item.imageUrl ? <img src={item.imageUrl} alt={item.prompt || 'Generated image'} className="h-full w-full object-cover" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-indigo-400"><ImageIcon size={28} strokeWidth={1.5} /><span className="px-3 text-center text-[9px] font-bold text-slate-400">Image creation saved</span></div>}</div>
-    <div className="p-3"><p className="line-clamp-2 text-xs font-black text-slate-800">{item.prompt || 'Image creation'}</p><p className="mt-1 text-[10px] font-semibold text-slate-400">{formatDate(item.createdAt || Date.now())}</p></div>
+  return <button type="button" disabled={!open} onClick={() => item.conversationId && onOpenChat(item.conversationId)} className={`flex min-h-[76px] w-full items-center gap-3 rounded-[24px] border border-white/90 bg-white/72 p-3 text-left shadow-[0_12px_38px_rgba(30,64,175,.07)] backdrop-blur-xl transition ${open ? 'active:scale-[.99]' : 'cursor-default'}`}>
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/90 bg-gradient-to-br from-sky-50 via-white to-indigo-100 text-indigo-400 shadow-inner">{item.imageUrl ? <img src={item.imageUrl} alt={item.prompt || 'Generated image'} className="h-full w-full object-cover" /> : <ImageIcon size={22} strokeWidth={1.6} />}</div>
+    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold text-slate-800">{item.prompt || 'Image creation'}</span><span className="mt-1 block truncate text-xs font-medium text-slate-400">Image creation · {formatDate(item.createdAt || Date.now())}</span></span>
+    <ChevronRight size={16} className="shrink-0 text-slate-300" />
   </button>
 }
 
@@ -107,7 +108,7 @@ export function ChatHistoryPage({ onBack, onOpenChat }: HistoryProps): JSX.Eleme
     : null
 
   const imageSection = (filter === 'all' || filter === 'images')
-    ? <section><SectionTitle icon={<ImageIcon size={15} />} title="Image creations" count={searchedImages.length} />{searchedImages.length === 0 ? <div className="rounded-[24px] border border-white/90 bg-white/60 p-5 text-center"><p className="text-xs font-bold text-slate-500">No image creations yet</p><p className="mt-1 text-[10px] font-medium text-slate-400">Only images explicitly created in Image Lab appear here.</p></div> : <div className="grid grid-cols-2 gap-3">{searchedImages.map((item) => <ImageCard key={item.id} item={item} onOpenChat={onOpenChat} />)}</div>}</section>
+    ? <section><SectionTitle icon={<ImageIcon size={15} />} title="Image creations" count={searchedImages.length} />{searchedImages.length === 0 ? <div className="rounded-[24px] border border-white/90 bg-white/60 p-5 text-center"><p className="text-xs font-bold text-slate-500">No image creations yet</p><p className="mt-1 text-[10px] font-medium text-slate-400">Only images explicitly created in Image Lab appear here.</p></div> : <div className="space-y-3">{searchedImages.map((item) => <ImageCard key={item.id} item={item} onOpenChat={onOpenChat} />)}</div>}</section>
     : null
 
   const videoSection = filter === 'all' || filter === 'videos'
