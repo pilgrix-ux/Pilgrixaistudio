@@ -6,6 +6,17 @@ import { validateEditPlan } from './edit-plan-validator.mjs'
 const store = isPersistentEditJobStoreConfigured() ? createPersistentEditJobStore() : createEditJobStore()
 const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
 
+// A media attachment by itself is NOT a request to generate a video. Video
+// processing must be explicitly requested by the user's language.
+const VIDEO_ACTION_WORDS = /\b(create|make|generate|produce|render|edit|turn|transform|cut|trim|compile|assemble|export|animate)\b/i
+const VIDEO_OBJECT_WORDS = /\b(video|videos|clip|clips|reel|reels|short|montage|edit|footage|film|movie|cinematic)\b/i
+const NON_VIDEO_CHAT_WORDS = /^(hi|hello|hey|thanks|thank you|okay|ok|yo|sup|what's up|whats up|good morning|good night)[.!?\s]*$/i
+function isExplicitVideoInstruction(prompt) {
+  const text = prompt.trim()
+  if (!text || NON_VIDEO_CHAT_WORDS.test(text)) return false
+  return VIDEO_ACTION_WORDS.test(text) && VIDEO_OBJECT_WORDS.test(text)
+}
+
 export async function handleEditApi({ req, res, url, authenticate, authorizeEntitlement, consumeEntitlement, checkRateLimit, videoRateLimit, callProvider, renderVideo }) {
   if (!url.pathname.startsWith('/api/edit-jobs')) return false
   const auth = await authenticate(req)
@@ -16,11 +27,19 @@ export async function handleEditApi({ req, res, url, authenticate, authorizeEnti
     if (!rate.allowed) { json(res, 429, { ok: false, error: { code: 'rate_limited', userMessage: 'Too many edit requests were made. Please wait and try again.', status: 429, retryable: true, retryAfterMs: rate.retryAfterMs } }); return true }
     const body = await readJson(req); const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
     if (!prompt) { json(res, 400, { ok: false, error: { code: 'validation_error', userMessage: 'Tell Pilgrix what you want to make.', status: 400, retryable: false } }); return true }
+
+    // This endpoint is intentionally strict. Generic conversation, questions,
+    // greetings, or media uploads must stay in chat and never consume a video edit.
+    if (!isExplicitVideoInstruction(prompt)) {
+      json(res, 422, { ok: false, error: { code: 'not_video_intent', userMessage: 'This does not look like a video-edit instruction. Keep it in the conversation instead.', status: 422, retryable: false }, intent: 'conversation' })
+      return true
+    }
+
     const entitlement = await authorizeEntitlement(auth)
     if (!entitlement.ok) { json(res, entitlement.status, { ok: false, error: entitlement.error }); return true }
     const job = await store.create({ userId: auth.userId, instruction: prompt, sourceMedia: Array.isArray(body.sourceMedia) ? body.sourceMedia : [], referenceMedia: Array.isArray(body.referenceMedia) ? body.referenceMedia : [] })
     void processJob(job, { body, auth, callProvider, consumeEntitlement, renderVideo }).catch(() => {})
-    json(res, 202, { ok: true, job: publicJob(job) }); return true
+    json(res, 202, { ok: true, intent: 'video', job: publicJob(job) }); return true
   }
   if (req.method === 'GET' && jobId) {
     const job = await store.get(jobId)
