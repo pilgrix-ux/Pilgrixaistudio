@@ -21,7 +21,9 @@ export type ImageCreationRecord = {
 }
 
 const CHAT_KEY = 'pilgrix.chat.history.v1'
+const IMAGE_KEY = 'pilgrix.image.history.v1'
 const CHAT_EVENT = 'pilgrix-chat-change'
+const IMAGE_EVENT = 'pilgrix-image-change'
 const PENDING_KEY = 'pilgrix.chat.sync.pending.v1'
 const KNOWN_KEY = 'pilgrix.chat.sync.known.v1'
 const OWNER_KEY = 'pilgrix.chat.sync.owner.v1'
@@ -47,12 +49,30 @@ const writeLocal = (chats: PersistedChat[]): void => {
   } catch { /* local cache is best-effort */ }
 }
 
+export const loadImageCreations = (): ImageCreationRecord[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(IMAGE_KEY)
+    const value = raw ? JSON.parse(raw) : []
+    return Array.isArray(value) ? value : []
+  } catch { return [] }
+}
+
+const writeImageCreations = (records: ImageCreationRecord[]): void => {
+  try {
+    window.localStorage.setItem(IMAGE_KEY, JSON.stringify(records.slice(0, 200)))
+    window.dispatchEvent(new Event(IMAGE_EVENT))
+  } catch { /* best-effort */ }
+}
+
 const clearLocal = (): void => {
   try {
     window.localStorage.removeItem(CHAT_KEY)
+    window.localStorage.removeItem(IMAGE_KEY)
     window.localStorage.removeItem(PENDING_KEY)
     window.localStorage.removeItem(KNOWN_KEY)
     window.dispatchEvent(new Event(CHAT_EVENT))
+    window.dispatchEvent(new Event(IMAGE_EVENT))
   } catch { /* ignore */ }
 }
 
@@ -105,14 +125,18 @@ const fromServer = (payload: any): PersistedChat[] => {
     preview: String(row.preview || ''),
     createdAt: Date.parse(row.created_at || '') || Date.now(),
     attachmentCount: Number(row.attachment_count || 0),
-    messages: messages
-      .filter((message: any) => String(message.conversation_id) === String(row.id))
-      .map((message: any) => ({
-        id: String(message.id),
-        role: message.role === 'assistant' ? 'assistant' : 'user',
-        text: String(message.text || ''),
-        createdAt: Date.parse(message.created_at || '') || undefined,
-      })),
+    messages: messages.filter((message: any) => String(message.conversation_id) === String(row.id)).map((message: any) => ({
+      id: String(message.id), role: message.role === 'assistant' ? 'assistant' : 'user', text: String(message.text || ''), createdAt: Date.parse(message.created_at || '') || undefined,
+    })),
+  }))
+}
+
+const fromServerImages = (payload: any): ImageCreationRecord[] => {
+  const images = Array.isArray(payload?.images) ? payload.images : []
+  return images.map((row: any) => ({
+    id: String(row.id), conversationId: row.conversation_id ? String(row.conversation_id) : undefined,
+    prompt: String(row.prompt || ''), imageUrl: String(row.image_url || ''), metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
+    createdAt: Date.parse(row.created_at || '') || Date.now(),
   }))
 }
 
@@ -124,6 +148,13 @@ const mergeChats = (local: PersistedChat[], remote: PersistedChat[]): PersistedC
     if (!existing || chat.messages.length >= existing.messages.length) merged.set(chat.id, chat)
   }
   return [...merged.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 100)
+}
+
+const mergeImages = (local: ImageCreationRecord[], remote: ImageCreationRecord[]): ImageCreationRecord[] => {
+  const merged = new Map<string, ImageCreationRecord>()
+  for (const item of remote) merged.set(item.id, item)
+  for (const item of local) merged.set(item.id, { ...merged.get(item.id), ...item })
+  return [...merged.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 200)
 }
 
 const pushChat = async (chat: PersistedChat): Promise<boolean> => {
@@ -145,17 +176,15 @@ const hydrate = async (): Promise<void> => {
     if (!response.ok) throw new Error(`hydrate failed: ${response.status}`)
     const payload = await response.json()
     const remote = fromServer(payload)
-    const local = readLocal()
-    const merged = mergeChats(local, remote)
+    const remoteImages = fromServerImages(payload)
+    const merged = mergeChats(readLocal(), remote)
     knownIds = new Set(remote.map((chat) => chat.id))
-    try {
-      window.localStorage.setItem(KNOWN_KEY, JSON.stringify([...knownIds]))
-      window.localStorage.setItem(OWNER_KEY, userId)
-    } catch { /* ignore */ }
+    try { window.localStorage.setItem(KNOWN_KEY, JSON.stringify([...knownIds])); window.localStorage.setItem(OWNER_KEY, userId) } catch { /* ignore */ }
     writeLocal(merged)
+    writeImageCreations(mergeImages(loadImageCreations(), remoteImages))
     for (const chat of merged) await pushChat(chat)
   } catch {
-    // Keep the local cache fully usable while offline or before the backend is configured.
+    // Keep the local cache usable while offline or before the backend is configured.
   }
 }
 
@@ -176,17 +205,11 @@ const flush = async (): Promise<void> => {
     const currentIds = new Set(chats.map((chat) => chat.id))
     const pending = readPending()
     const missing = [...knownIds].filter((id) => !currentIds.has(id))
-    for (const id of missing) {
-      if (!(await deleteChat(id))) pending.push(id)
-    }
-    for (const chat of chats) {
-      if (!(await pushChat(chat))) pending.push(chat.id)
-    }
+    for (const id of missing) if (!(await deleteChat(id))) pending.push(id)
+    for (const chat of chats) if (!(await pushChat(chat))) pending.push(chat.id)
     writePending(pending.filter((id) => currentIds.has(id)))
     try { window.localStorage.setItem(KNOWN_KEY, JSON.stringify([...knownIds])) } catch { /* ignore */ }
-  } finally {
-    syncing = false
-  }
+  } finally { syncing = false }
 }
 
 const scheduleFlush = (): void => {
@@ -200,10 +223,7 @@ const handleAuthChange = (): void => {
   if (nextUserId === activeUserId) return
   activeUserId = nextUserId
   knownIds = new Set()
-  if (!nextUserId) {
-    clearLocal()
-    return
-  }
+  if (!nextUserId) { clearLocal(); return }
   let owner = ''
   try { owner = window.localStorage.getItem(OWNER_KEY) || '' } catch { /* ignore */ }
   if (owner && owner !== nextUserId) clearLocal()
@@ -211,9 +231,11 @@ const handleAuthChange = (): void => {
 }
 
 export const saveImageCreation = async (creation: ImageCreationRecord): Promise<boolean> => {
-  if (!isAuthenticated()) return false
+  const normalized: ImageCreationRecord = { ...creation, id: creation.id || `image-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, prompt: creation.prompt.trim(), imageUrl: creation.imageUrl || '', createdAt: creation.createdAt || Date.now() }
+  writeImageCreations([normalized, ...loadImageCreations().filter((item) => item.id !== normalized.id)])
+  if (!isAuthenticated()) return true
   try {
-    const response = await request('/api/conversations', { method: 'POST', body: JSON.stringify({ action: 'save_image', ...creation }) })
+    const response = await request('/api/conversations', { method: 'POST', body: JSON.stringify({ action: 'save_image', ...normalized }) })
     return response.ok
   } catch { return false }
 }
@@ -222,22 +244,20 @@ export const startConversationPersistence = (): (() => void) => {
   if (started || typeof window === 'undefined') return () => undefined
   started = true
   activeUserId = isAuthenticated() ? session().user?.id || null : null
-
   const onChange = () => scheduleFlush()
   const onOnline = () => { void flush() }
   const onAuth = () => handleAuthChange()
   window.addEventListener(CHAT_EVENT, onChange)
+  window.addEventListener(IMAGE_EVENT, onChange)
   window.addEventListener('online', onOnline)
   window.addEventListener(AUTH_EVENT, onAuth)
   if (activeUserId) void hydrate().then(() => scheduleFlush())
   const interval = window.setInterval(() => { void flush() }, 15000)
-
   return () => {
     window.removeEventListener(CHAT_EVENT, onChange)
+    window.removeEventListener(IMAGE_EVENT, onChange)
     window.removeEventListener('online', onOnline)
     window.removeEventListener(AUTH_EVENT, onAuth)
-    window.clearInterval(interval)
-    window.clearTimeout(retryTimer)
-    started = false
+    window.clearInterval(interval); window.clearTimeout(retryTimer); started = false
   }
 }
