@@ -1,0 +1,154 @@
+/* Pilgrix dark theme: calm, genuinely dark, soft white accents. */
+html[data-pilgrix-theme='crystal-night'] {
+  color-scheme: dark;
+  background: #0b0d12 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] body {
+  background: #0b0d12 !important;
+  color: #f4f5f7 !important;
+}
+
+/* Replace the old bright/grid treatment with very subtle floating dots. */
+html[data-pilgrix-theme='crystal-night'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .32;
+  background-image: radial-gradient(circle, rgba(255,255,255,.16) 1px, transparent 1.2px);
+  background-size: 30px 30px;
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 78%);
+}
+
+html[data-pilgrix-theme='crystal-night'] main {
+  color: #f4f5f7 !important;
+  background: #0b0d12 !important;
+}
+
+/* Keep surfaces dark instead of turning every white card into a bright panel. */
+html[data-pilgrix-theme='crystal-night'] .bg-white,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/65,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/70,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/72,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/75,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/78,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/80,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/85,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/90,
+html[data-pilgrix-theme='crystal-night'] .bg-white\/95,
+html[data-pilgrix-theme='crystal-night'] .bg-slate-50\/80,
+html[data-pilgrix-theme='crystal-night'] .bg-slate-50\/90,
+html[data-pilgrix-theme='crystal-night'] .bg-slate-50\/95 {
+  background: rgba(22,25,32,.86) !important;
+  border-color: rgba(255,255,255,.075) !important;
+  box-shadow: none !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .bg-slate-50,
+html[data-pilgrix-theme='crystal-night'] .bg-slate-100,
+html[data-pilgrix-theme='crystal-night'] .bg-sky-50,
+html[data-pilgrix-theme='crystal-night'] .bg-sky-50\/80,
+html[data-pilgrix-theme='crystal-night'] .bg-sky-100,
+html[data-pilgrix-theme='crystal-night'] .bg-indigo-50,
+html[data-pilgrix-theme='crystal-night'] .bg-indigo-50\/90,
+html[data-pilgrix-theme='crystal-night'] .bg-indigo-100 {
+  background: rgba(255,255,255,.045) !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .backdrop-blur-xl,
+html[data-pilgrix-theme='crystal-night'] .backdrop-blur-2xl {
+  background-color: rgba(15,18,24,.78) !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .text-slate-950,
+html[data-pilgrix-theme='crystal-night'] .text-slate-900,
+html[data-pilgrix-theme='crystal-night'] .text-slate-800,
+html[data-pilgrix-theme='crystal-night'] .text-slate-700,
+html[data-pilgrix-theme='crystal-night'] .text-slate-600 {
+  color: #f1f3f6 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .text-slate-500,
+html[data-pilgrix-theme='crystal-night'] .text-slate-400,
+html[data-pilgrix-theme='crystal-night'] .text-slate-300 {
+  color: #929aa8 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .text-sky-500,
+html[data-pilgrix-theme='crystal-night'] .text-sky-600,
+html[data-pilgrix-theme='crystal-night'] .text-indigo-500,
+html[data-pilgrix-theme='crystal-night'] .text-indigo-600 {
+  color: #a9c9ff !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .border-white,
+html[data-pilgrix-theme='crystal-night'] .border-white\/70,
+html[data-pilgrix-theme='crystal-night'] .border-white\/80,
+html[data-pilgrix-theme='crystal-night'] .border-white\/90,
+html[data-pilgrix-theme='crystal-night'] .border-white\/95,
+html[data-pilgrix-theme='crystal-night'] .border-slate-200,
+html[data-pilgrix-theme='crystal-night'] .border-slate-200\/60,
+html[data-pilgrix-theme='crystal-night'] .border-slate-200\/70,
+html[data-pilgrix-theme='crystal-night'] .border-slate-200\/80,
+html[data-pilgrix-theme='crystal-night'] .border-sky-100,
+html[data-pilgrix-theme='crystal-night'] .border-indigo-100 {
+  border-color: rgba(255,255,255,.075) !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] .shadow-sm,
+html[data-pilgrix-theme='crystal-night'] .shadow-lg,
+html[data-pilgrix-theme='crystal-night'] .shadow-xl {
+  box-shadow: 0 10px 32px rgba(0,0,0,.28) !important;
+}
+
+/* Do not turn the send/action controls into huge white blocks. */
+html[data-pilgrix-theme='crystal-night'] .bg-slate-950 {
+  background: #f1f3f5 !important;
+  color: #111318 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] input,
+html[data-pilgrix-theme='crystal-night'] textarea {
+  color: #f5f6f8 !important;
+  background-color: transparent !important;
+  caret-color: #fff !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] input::placeholder,
+html[data-pilgrix-theme='crystal-night'] textarea::placeholder {
+  color: #777f8d !important;
+}
+
+/* The conversation page previously forced a light canvas. Dark mode wins here. */
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) {
+  background: #0b0d12 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) > header {
+  border-bottom-color: rgba(255,255,255,.06) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.20) !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) > header > div:nth-child(2) {
+  background: rgba(22,25,32,.72) !important;
+  border-color: rgba(255,255,255,.07) !important;
+  box-shadow: none !important;
+}
+
+/* Remove the old assistant label injected by the theme. */
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) > header > div:nth-child(2)::after {
+  display: none !important;
+  content: none !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) > footer {
+  background: linear-gradient(to top, rgba(11,13,18,.98) 72%, rgba(11,13,18,0)) !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] main:has(textarea[placeholder='Continue the conversation...']) > footer > div {
+  border-color: rgba(255,255,255,.07) !important;
+  background: rgba(18,21,28,.92) !important;
+  box-shadow: 0 10px 35px rgba(0,0,0,.30) !important;
+}
