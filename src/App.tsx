@@ -3,7 +3,6 @@ import { CodePenAiLab } from '@/components/CodePenAiLab'
 import { LivingPals } from '@/components/LivingPals'
 import { ImagesPage } from '@/pages/ImagesPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
-import { SearchCreationsPage } from '@/pages/SearchCreationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { ChatHistoryPage, ConversationPage } from '@/pages/ChatPages'
 import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigClient'
@@ -11,8 +10,8 @@ import { startConversationPersistence } from '@/services/conversationPersistence
 import './App.css'
 import '@/styles/crystal-theme.css'
 
-type Page = 'ai' | 'projects' | 'images' | 'search' | 'settings' | 'chats' | 'conversation'
-const HASH_TO_PAGE: Record<string, Page> = { '#projects': 'projects', '#images': 'images', '#search': 'search', '#settings': 'settings', '#chats': 'chats' }
+type Page = 'ai' | 'projects' | 'images' | 'settings' | 'chats' | 'conversation'
+const HASH_TO_PAGE: Record<string, Page> = { '#projects': 'projects', '#images': 'images', '#settings': 'settings', '#chats': 'chats' }
 const THEME_KEY = 'pilgrix.settings.theme'
 
 function pageFromHash(): Page {
@@ -78,11 +77,10 @@ function App(): JSX.Element {
 
   if (page === 'projects') return <ProjectsPage onBack={() => navigate('ai', true)} />
   if (page === 'images') return <><ImagesPage onBack={() => navigate('ai', true)} /><LivingPals page="images" /></>
-  if (page === 'search') return <SearchCreationsPage onBack={() => navigate('ai', true)} />
   if (page === 'settings') return <SettingsPage onBack={() => navigate('ai', true)} />
   if (page === 'chats') return <ChatHistoryPage onBack={() => navigate('ai', true)} onOpenChat={(id) => navigate('conversation', false, id)} />
   if (page === 'conversation') return <ConversationPage id={chatIdFromHash()} onBack={() => navigate('chats')} />
-  return <><CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSearch={(fromMenu = false) => navigate('search', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} onOpenChats={(fromMenu = false) => navigate('chats', fromMenu)} onOpenConversation={(id) => navigate('conversation', false, id)} /><LivingPals page="ai" /></>
+  return <><CodePenAiLab menuReturnSignal={menuReturnSignal} onOpenProjects={(fromMenu = false) => navigate('projects', fromMenu)} onOpenImages={(fromMenu = false) => navigate('images', fromMenu)} onOpenSettings={(fromMenu = false) => navigate('settings', fromMenu)} onOpenChats={(fromMenu = false) => navigate('chats', fromMenu)} onOpenConversation={(id) => navigate('conversation', false, id)} /><LivingPals page="ai" /></>
 }
 
 export default App
