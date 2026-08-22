@@ -18,7 +18,12 @@ const THEME_KEY = 'pilgrix.settings.theme'
 function pageFromHash(): Page { if (typeof window === 'undefined') return 'ai'; if (window.location.hash.startsWith('#chat/')) return 'conversation'; return HASH_TO_PAGE[window.location.hash] ?? 'ai' }
 function chatIdFromHash(): string { if (typeof window === 'undefined') return ''; return decodeURIComponent(window.location.hash.slice('#chat/'.length)) }
 function readTheme(): 'light' | 'dark' { if (typeof window === 'undefined') return 'light'; return window.localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light' }
-function applyTheme(theme: 'light' | 'dark'): void { document.documentElement.dataset.pilgrixTheme = theme === 'dark' ? 'crystal-night' : 'light' }
+function applyTheme(theme: 'light' | 'dark'): void {
+  const root = document.documentElement
+  root.dataset.pilgrixTheme = theme === 'dark' ? 'crystal-night' : 'light'
+  root.classList.toggle('pilgrix-crystal-night', theme === 'dark')
+  root.style.colorScheme = theme === 'dark' ? 'dark' : 'light'
+}
 function App(): JSX.Element {
   const [page, setPage] = useState<Page>(pageFromHash)
   const [menuReturnSignal, setMenuReturnSignal] = useState(0)
