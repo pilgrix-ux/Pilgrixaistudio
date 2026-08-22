@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { ArrowLeft, ArrowUp, Camera, File, Image, ImagePlus, Mic, Plus, Sparkles, X } from 'lucide-react'
+import { appendChatMessage, createChat } from '@/pages/ChatPages'
 import { saveImageCreation } from '@/services/conversationPersistence'
 
 type ChatAttachment = { id: string; name: string; url: string }
@@ -9,6 +10,7 @@ const STARTER_PROMPTS = ['Create a clean product image', 'Make a cinematic poste
 export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
   const [working, setWorking] = useState(false)
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
@@ -42,11 +44,15 @@ export function ImagesPage({ onBack }: { onBack: () => void }): JSX.Element {
     const currentAttachments = attachments
     const creationId = `image-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     const creationPrompt = text || 'Use these images as references.'
+    const chat = conversationId ? null : createChat(creationPrompt, currentAttachments.length)
+    const activeConversationId = conversationId || chat?.id || null
 
-    // Image Lab is the only place that creates image-history records.
-    // Normal chat attachments never become image history entries.
+    if (chat) setConversationId(chat.id)
+    if (conversationId) appendChatMessage(conversationId, { role: 'user', text: creationPrompt })
+
     void saveImageCreation({
       id: creationId,
+      conversationId: activeConversationId || undefined,
       prompt: creationPrompt,
       imageUrl: '',
       metadata: { type: 'image', status: 'pending', referenceCount: currentAttachments.length },
