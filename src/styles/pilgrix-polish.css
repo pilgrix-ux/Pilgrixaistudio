@@ -1,34 +1,62 @@
-/* Pilgrix visual polish: only active inside the selected dark theme. */
+/* Pilgrix conversation polish */
+
+/* Dark theme: selected only. Keep the canvas genuinely dark and calm. */
+html[data-pilgrix-theme='crystal-night'] {
+  color-scheme: dark;
+  background: #0b0d12 !important;
+}
 html[data-pilgrix-theme='crystal-night'] body,
 html[data-pilgrix-theme='crystal-night'] main {
   background: #0b0d12 !important;
+  color: #f2f4f7;
 }
-
 html[data-pilgrix-theme='crystal-night'] body::before {
-  background-image: radial-gradient(circle, rgba(255,255,255,.16) 1px, transparent 1.5px) !important;
-  background-size: 28px 28px !important;
-  opacity: .18 !important;
-  mask-image: linear-gradient(to bottom, black, transparent 88%) !important;
+  background-image: radial-gradient(circle, rgba(255,255,255,.12) 1px, transparent 1.5px) !important;
+  background-size: 30px 30px !important;
+  opacity: .10 !important;
 }
 
-/* Softer conversation surfaces: no heavy card borders. */
-html[data-pilgrix-theme='crystal-night'] [class*='border-slate-200'],
-html[data-pilgrix-theme='crystal-night'] [class*='border-white'] {
-  border-color: rgba(255,255,255,.08) !important;
-}
-html[data-pilgrix-theme='crystal-night'] [class*='shadow-lg'],
-html[data-pilgrix-theme='crystal-night'] [class*='shadow-xl'] {
-  box-shadow: 0 14px 42px rgba(0,0,0,.24) !important;
-}
-
-/* Conversation bubbles/cards should read as soft surfaces, not framed boxes. */
-html[data-pilgrix-theme='crystal-night'] main:has(textarea) [class*='rounded-2xl'],
-html[data-pilgrix-theme='crystal-night'] main:has(textarea) [class*='rounded-3xl'] {
-  border-color: rgba(255,255,255,.07) !important;
+/* Remove the chunky framed-card look from conversation turns. */
+html[data-pilgrix-theme='crystal-night'] main [class*='border-slate-200'],
+html[data-pilgrix-theme='crystal-night'] main [class*='border-white'],
+html[data-pilgrix-theme='light'] main [class*='border-slate-200'],
+html[data-pilgrix-theme='light'] main [class*='border-white'] {
+  border-color: transparent !important;
+  border-width: 0 !important;
 }
 
-/* Keep the light theme exactly as the default when no dark theme is selected. */
+/* Conversation surfaces: subtle separation, no thick outlines. */
+html[data-pilgrix-theme='crystal-night'] main [class*='rounded-2xl'],
+html[data-pilgrix-theme='crystal-night'] main [class*='rounded-3xl'],
+html[data-pilgrix-theme='light'] main [class*='rounded-2xl'],
+html[data-pilgrix-theme='light'] main [class*='rounded-3xl'] {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Only media keeps a defined edge. */
+html[data-pilgrix-theme='crystal-night'] main img,
+html[data-pilgrix-theme='light'] main img {
+  border-radius: 16px;
+}
+
+/* User text gets a quiet surface rather than a card outline. */
+html[data-pilgrix-theme='crystal-night'] main textarea,
+html[data-pilgrix-theme='crystal-night'] main [contenteditable='true'] {
+  border-color: rgba(255,255,255,.10) !important;
+  background: #151821 !important;
+  color: #f2f4f7 !important;
+}
+
+/* Light is intentionally clean and white when selected/default. */
 html[data-pilgrix-theme='light'] body,
 html[data-pilgrix-theme='light'] main {
-  background: #ffffff !important;
+  background: #fff !important;
+  color: #111827;
+}
+html[data-pilgrix-theme='light'] main textarea,
+html[data-pilgrix-theme='light'] main [contenteditable='true'] {
+  border-color: #e5e7eb !important;
+  background: #fff !important;
+  color: #111827 !important;
 }
