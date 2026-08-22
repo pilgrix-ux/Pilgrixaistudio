@@ -1,0 +1,34 @@
+/* Pilgrix visual polish: only active inside the selected dark theme. */
+html[data-pilgrix-theme='crystal-night'] body,
+html[data-pilgrix-theme='crystal-night'] main {
+  background: #0b0d12 !important;
+}
+
+html[data-pilgrix-theme='crystal-night'] body::before {
+  background-image: radial-gradient(circle, rgba(255,255,255,.16) 1px, transparent 1.5px) !important;
+  background-size: 28px 28px !important;
+  opacity: .18 !important;
+  mask-image: linear-gradient(to bottom, black, transparent 88%) !important;
+}
+
+/* Softer conversation surfaces: no heavy card borders. */
+html[data-pilgrix-theme='crystal-night'] [class*='border-slate-200'],
+html[data-pilgrix-theme='crystal-night'] [class*='border-white'] {
+  border-color: rgba(255,255,255,.08) !important;
+}
+html[data-pilgrix-theme='crystal-night'] [class*='shadow-lg'],
+html[data-pilgrix-theme='crystal-night'] [class*='shadow-xl'] {
+  box-shadow: 0 14px 42px rgba(0,0,0,.24) !important;
+}
+
+/* Conversation bubbles/cards should read as soft surfaces, not framed boxes. */
+html[data-pilgrix-theme='crystal-night'] main:has(textarea) [class*='rounded-2xl'],
+html[data-pilgrix-theme='crystal-night'] main:has(textarea) [class*='rounded-3xl'] {
+  border-color: rgba(255,255,255,.07) !important;
+}
+
+/* Keep the light theme exactly as the default when no dark theme is selected. */
+html[data-pilgrix-theme='light'] body,
+html[data-pilgrix-theme='light'] main {
+  background: #ffffff !important;
+}
