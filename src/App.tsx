@@ -9,6 +9,7 @@ import { applyRuntimeTheme, fetchRuntimeConfig } from '@/services/runtimeConfigC
 import { startConversationPersistence } from '@/services/conversationPersistence'
 import './App.css'
 import '@/styles/crystal-theme.css'
+import '@/styles/dark-theme-overrides.css'
 
 type Page = 'ai' | 'projects' | 'images' | 'settings' | 'chats' | 'conversation'
 const HASH_TO_PAGE: Record<string, Page> = { '#projects': 'projects', '#images': 'images', '#settings': 'settings', '#chats': 'chats' }
